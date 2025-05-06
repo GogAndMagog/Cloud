@@ -12,6 +12,9 @@ import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.Type;
 
@@ -19,6 +22,8 @@ import org.hibernate.annotations.Type;
 @Setter
 @Entity
 @Table(name = "users", indexes = @Index(name = "users_name", columnList = "name", unique = true))
+@RequiredArgsConstructor
+@NoArgsConstructor
 public class User {
 
     @Id
@@ -28,11 +33,11 @@ public class User {
     private Long id;
 
     @Size(max = 20)
-    @NotNull
+    @NonNull
     @Column(name = "name", length = 20, nullable = false)
     private String name;
 
-    @NotNull
+    @NonNull
     @Column(name = "password", nullable = false, columnDefinition = "TEXT")
     private String password;
 }

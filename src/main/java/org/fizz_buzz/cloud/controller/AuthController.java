@@ -1,5 +1,6 @@
 package org.fizz_buzz.cloud.controller;
 
+import jakarta.validation.Valid;
 import org.fizz_buzz.cloud.dto.request.RequestSignUpDTO;
 import org.fizz_buzz.cloud.dto.response.ResponseSignUpDTO;
 import org.fizz_buzz.cloud.service.AuthService;
@@ -21,7 +22,7 @@ public class AuthController {
     private AuthService authService;
 
     @PostMapping(value = "/sign_up", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ResponseSignUpDTO> signUp(@RequestBody RequestSignUpDTO request){
+    public ResponseEntity<ResponseSignUpDTO> signUp(@Valid @RequestBody RequestSignUpDTO request){
 
         var responseDto = authService.signUp(request);
 

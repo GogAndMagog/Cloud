@@ -18,13 +18,19 @@ import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.Type;
 
+import java.io.Serial;
+import java.io.Serializable;
+
 @Getter
 @Setter
 @Entity
 @Table(name = "users", indexes = @Index(name = "users_name", columnList = "name", unique = true))
 @RequiredArgsConstructor
 @NoArgsConstructor
-public class User {
+public class User implements Serializable {
+
+    @Serial
+    private static final long serialVersionUID = 1L;
 
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "user_seq")

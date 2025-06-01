@@ -1,7 +1,6 @@
 package org.fizz_buzz.cloud.service;
 
-import org.fizz_buzz.cloud.dto.request.RequestSignUpDTO;
-import org.fizz_buzz.cloud.dto.response.ResponseSignUpDTO;
+import org.fizz_buzz.cloud.dto.UserDTO;
 import org.fizz_buzz.cloud.model.User;
 import org.fizz_buzz.cloud.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,12 +15,12 @@ public class AuthService {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-    public ResponseSignUpDTO signUp(RequestSignUpDTO request){
+    public UserDTO signUp(UserDTO request){
 
-        return new ResponseSignUpDTO(userRepository
-                .save(new User(
-                        request.username(),
-                        passwordEncoder.encode(request.password())))
-                .getName());
+        var savedUser = userRepository.save(new User(request.username(), passwordEncoder.encode(request.password())));
+
+        return new UserDTO(
+                savedUser.getName(),
+                "");
     }
 }

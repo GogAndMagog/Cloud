@@ -1,12 +1,11 @@
 package org.fizz_buzz.cloud.controller;
 
+import com.fasterxml.jackson.annotation.JsonView;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
-import org.fizz_buzz.cloud.dto.request.RequestSignInDTO;
-import org.fizz_buzz.cloud.dto.request.RequestSignUpDTO;
-import org.fizz_buzz.cloud.dto.response.ResponseSignInDTO;
-import org.fizz_buzz.cloud.dto.response.ResponseSignUpDTO;
+import org.fizz_buzz.cloud.dto.UserDTO;
+import org.fizz_buzz.cloud.dto.view.UserViews;
 import org.fizz_buzz.cloud.service.AuthService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -38,7 +37,8 @@ public class AuthController {
     }
 
     @PostMapping(value = "/sign_up", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ResponseSignUpDTO> signUp(@Valid @RequestBody RequestSignUpDTO request){
+    @JsonView(UserViews.Response.class)
+    public ResponseEntity<UserDTO> signUp(@Valid @RequestBody UserDTO request) {
 
         var responseDto = authService.signUp(request);
 
@@ -46,8 +46,9 @@ public class AuthController {
     }
 
     @PostMapping(value = "/sign_in", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ResponseSignInDTO> signIn(@Valid @RequestBody RequestSignInDTO request,
-                                                    HttpServletRequest httpRequest){
+    @JsonView(UserViews.Response.class)
+    public ResponseEntity<UserDTO> signIn(@Valid @RequestBody UserDTO request,
+                                          HttpServletRequest httpRequest) {
 
         Authentication authenticationRequest =
                 UsernamePasswordAuthenticationToken.unauthenticated(request.username(), request.password());
@@ -55,23 +56,21 @@ public class AuthController {
                 this.authenticationManager.authenticate(authenticationRequest);
 
         if (authenticationResponse != null &&
-            authenticationResponse.isAuthenticated()) {
-            ResponseSignInDTO responseDto = new ResponseSignInDTO(authenticationResponse.getName());
+                authenticationResponse.isAuthenticated()) {
+            UserDTO responseDto = new UserDTO(authenticationResponse.getName(), "");
 
             SecurityContextHolder.getContext().setAuthentication(authenticationResponse);
             HttpSession session = httpRequest.getSession(true);
             session.setAttribute("SPRING_SECURITY_CONTEXT", SecurityContextHolder.getContext());
 
             return new ResponseEntity<>(responseDto, HttpStatus.CREATED);
-        }
-        else {
+        } else {
             throw new AuthenticationCredentialsNotFoundException("Credentials not found!");
         }
     }
 
     @GetMapping
-    public ResponseEntity<String> getTest()
-    {
+    public ResponseEntity<String> getTest() {
         return ResponseEntity.ok().body("Test");
     }
 }

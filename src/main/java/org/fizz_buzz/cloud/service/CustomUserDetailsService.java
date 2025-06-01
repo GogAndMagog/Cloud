@@ -1,8 +1,8 @@
 package org.fizz_buzz.cloud.service;
 
-import org.fizz_buzz.cloud.dto.CustomUserDetails;
 import org.fizz_buzz.cloud.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -17,12 +17,15 @@ public class CustomUserDetailsService implements UserDetailsService {
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
 
-        var user = userRepository.findByName(username);
+        var userEntity = userRepository.findByName(username);
 
-        if (user.isEmpty()) {
+        if (userEntity.isEmpty()) {
             throw new UsernameNotFoundException(username);
         }
 
-        return new CustomUserDetails(user.get());
+        return User
+                .withUsername(userEntity.get().getName())
+                .password(userEntity.get().getPassword())
+                .build();
     }
 }

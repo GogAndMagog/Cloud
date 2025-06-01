@@ -1,6 +1,5 @@
 package org.fizz_buzz.cloud.repository;
 
-import org.fizz_buzz.cloud.dto.CustomUserDetails;
 import org.fizz_buzz.cloud.model.User;
 import org.springframework.data.repository.CrudRepository;
 

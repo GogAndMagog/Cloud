@@ -1,7 +1,6 @@
 package org.fizz_buzz.cloud.controller;
 
 import com.fasterxml.jackson.annotation.JsonView;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import org.fizz_buzz.cloud.dto.UserDTO;
@@ -11,11 +10,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -30,43 +24,23 @@ public class AuthController {
     private AuthService authService;
 
 
-    private final AuthenticationManager authenticationManager;
-
-    public AuthController(AuthenticationManager authenticationManager) {
-        this.authenticationManager = authenticationManager;
-    }
-
     @PostMapping(value = "/sign_up", produces = MediaType.APPLICATION_JSON_VALUE)
     @JsonView(UserViews.Response.class)
     public ResponseEntity<UserDTO> signUp(@Valid @RequestBody UserDTO request) {
 
-        var responseDto = authService.signUp(request);
+        var response = authService.signUp(request);
 
-        return new ResponseEntity<>(responseDto, HttpStatus.CREATED);
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
     @PostMapping(value = "/sign_in", produces = MediaType.APPLICATION_JSON_VALUE)
     @JsonView(UserViews.Response.class)
     public ResponseEntity<UserDTO> signIn(@Valid @RequestBody UserDTO request,
-                                          HttpServletRequest httpRequest) {
+                                          HttpSession session) {
 
-        Authentication authenticationRequest =
-                UsernamePasswordAuthenticationToken.unauthenticated(request.username(), request.password());
-        Authentication authenticationResponse =
-                this.authenticationManager.authenticate(authenticationRequest);
+        var response = authService.signIn(request, session);
 
-        if (authenticationResponse != null &&
-                authenticationResponse.isAuthenticated()) {
-            UserDTO responseDto = new UserDTO(authenticationResponse.getName(), "");
-
-            SecurityContextHolder.getContext().setAuthentication(authenticationResponse);
-            HttpSession session = httpRequest.getSession(true);
-            session.setAttribute("SPRING_SECURITY_CONTEXT", SecurityContextHolder.getContext());
-
-            return new ResponseEntity<>(responseDto, HttpStatus.CREATED);
-        } else {
-            throw new AuthenticationCredentialsNotFoundException("Credentials not found!");
-        }
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     @GetMapping

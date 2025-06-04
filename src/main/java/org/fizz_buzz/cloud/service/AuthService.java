@@ -1,57 +1,50 @@
 package org.fizz_buzz.cloud.service;
 
-import jakarta.servlet.http.HttpSession;
-import org.fizz_buzz.cloud.dto.UserDTO;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
+import org.fizz_buzz.cloud.dto.request.UserRequestDTO;
+import org.fizz_buzz.cloud.dto.response.UserResponseDTO;
 import org.fizz_buzz.cloud.model.User;
 import org.fizz_buzz.cloud.repository.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.context.SecurityContextImpl;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.stereotype.Service;
 
 @Service
+@RequiredArgsConstructor
 public class AuthService {
 
-    @Autowired
-    private UserRepository userRepository;
-    @Autowired
-    private PasswordEncoder passwordEncoder;
-    @Autowired
-    private AuthenticationManager authenticationManager;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final AuthenticationManager authenticationManager;
+    private final SecurityContextRepository securityContextRepository;
 
 
-    public UserDTO signUp(UserDTO request){
+    public UserResponseDTO signUp(UserRequestDTO request) {
 
         var savedUser = userRepository.save(new User(request.username(), passwordEncoder.encode(request.password())));
 
-        return new UserDTO(
-                savedUser.getName(),
-                "");
+        return new UserResponseDTO(
+                savedUser.getName());
     }
 
-    public UserDTO signIn(UserDTO request,
-                          HttpSession session){
+    public UserResponseDTO signIn(UserRequestDTO request,
+                                  HttpServletRequest httpServletRequest,
+                                  HttpServletResponse httpServletResponse) {
 
         Authentication authenticationRequest =
                 UsernamePasswordAuthenticationToken.unauthenticated(request.username(), request.password());
         Authentication authenticationResponse =
                 this.authenticationManager.authenticate(authenticationRequest);
+        var securityContext = new SecurityContextImpl(authenticationResponse);
 
-        if (authenticationResponse != null &&
-                authenticationResponse.isAuthenticated()) {
-            UserDTO responseDto = new UserDTO(authenticationResponse.getName(), "");
+        securityContextRepository.saveContext(securityContext, httpServletRequest, httpServletResponse);
 
-            SecurityContextHolder.getContext().setAuthentication(authenticationResponse);
-
-            session.setAttribute("SPRING_SECURITY_CONTEXT", SecurityContextHolder.getContext());
-
-            return responseDto;
-        } else {
-            throw new AuthenticationCredentialsNotFoundException("Credentials not found!");
-        }
+        return new UserResponseDTO(authenticationResponse.getName());
     }
 }

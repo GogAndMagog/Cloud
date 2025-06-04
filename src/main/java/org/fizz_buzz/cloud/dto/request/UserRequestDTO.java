@@ -1,17 +1,14 @@
-package org.fizz_buzz.cloud.dto;
+package org.fizz_buzz.cloud.dto.request;
 
-import com.fasterxml.jackson.annotation.JsonView;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import org.fizz_buzz.cloud.dto.view.UserViews;
 
-public record UserDTO(
+public record UserRequestDTO(
 
         @NotNull
         @NotEmpty
         @Size(min = 5, max = 20)
-        @JsonView(UserViews.Response.class)
         String username,
 
         @NotNull

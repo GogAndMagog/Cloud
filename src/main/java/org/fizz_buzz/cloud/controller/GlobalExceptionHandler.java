@@ -3,6 +3,8 @@ package org.fizz_buzz.cloud.controller;
 import org.fizz_buzz.cloud.dto.MessageDTO;
 import org.fizz_buzz.cloud.exception.UserAlreadyExists;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -39,5 +41,19 @@ public class GlobalExceptionHandler {
                         .formatted(error.getField(), error.getDefaultMessage())));
 
         return new MessageDTO(errorMessageBuilder.toString());
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    public MessageDTO handleAccessDeniedException(AccessDeniedException e){
+
+        return new MessageDTO(e.getMessage());
+    }
+
+    @ExceptionHandler(AuthenticationException.class)
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    public MessageDTO handleAuthenticationException (AuthenticationException e){
+
+        return new MessageDTO(e.getMessage());
     }
 }

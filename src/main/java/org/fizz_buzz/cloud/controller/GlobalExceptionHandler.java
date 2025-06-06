@@ -3,6 +3,8 @@ package org.fizz_buzz.cloud.controller;
 import org.fizz_buzz.cloud.dto.MessageDTO;
 import org.fizz_buzz.cloud.exception.UserAlreadyExists;
 import org.springframework.http.HttpStatus;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -22,5 +24,20 @@ public class GlobalExceptionHandler {
     public MessageDTO eserAlreadyExistsHandling(Exception e) {
 
         return new MessageDTO(e.getMessage());
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public MessageDTO validationExceptionHandling(MethodArgumentNotValidException e) {
+
+        BindingResult bindingResult = e.getBindingResult();
+        StringBuilder errorMessageBuilder = new StringBuilder();
+
+        bindingResult
+                .getFieldErrors()
+                .forEach(error -> errorMessageBuilder.append("Field: %s Error: %s \n"
+                        .formatted(error.getField(), error.getDefaultMessage())));
+
+        return new MessageDTO(errorMessageBuilder.toString());
     }
 }

@@ -2,7 +2,6 @@ package org.fizz_buzz.cloud.service;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.validation.ConstraintViolationException;
 import lombok.RequiredArgsConstructor;
 import org.fizz_buzz.cloud.dto.request.UserRequestDTO;
 import org.fizz_buzz.cloud.dto.response.UserResponseDTO;
@@ -17,8 +16,11 @@ import org.springframework.security.core.context.SecurityContextImpl;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.stereotype.Service;
+import org.hibernate.exception.ConstraintViolationException;
+
 
 import java.sql.SQLException;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -32,26 +34,22 @@ public class AuthService {
 
     public UserResponseDTO signUp(UserRequestDTO request) {
 
-//        if (userRepository.existsByName(request.username())){
-//            throw new UserAlreadyExists("User with name %s already exists".formatted(request.username()));
-//        }
+        User savedUser;
 
-        User savedUser = null;
         try {
             savedUser = userRepository.save(new User(request.username(), passwordEncoder.encode(request.password())));
         } catch (DataIntegrityViolationException e) {
 
-            if (e.getRootCause() instanceof SQLException){
-                if (((SQLException) e.getRootCause()).getSQLState().equals("23505")){
-                    throw new UserAlreadyExists("User with name %s already exists".formatted(request.username()));
-                }
+            if (e.getCause() instanceof ConstraintViolationException
+                    && (((ConstraintViolationException) e.getCause()).getSQLState().equals("23505"))
+                    && (Objects.equals(((ConstraintViolationException) e.getCause()).getConstraintName(), "users_name"))) {
+                throw new UserAlreadyExists("User with name \"%s\" already exists".formatted(request.username()));
+            } else {
+                throw e;
             }
-
-            throw e;
         }
 
-        return new UserResponseDTO(
-                savedUser.getName());
+        return new UserResponseDTO(savedUser.getName());
     }
 
     public UserResponseDTO signIn(UserRequestDTO request,

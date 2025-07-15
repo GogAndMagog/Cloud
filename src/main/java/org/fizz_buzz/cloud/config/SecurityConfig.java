@@ -27,9 +27,9 @@ public class SecurityConfig {
         http.authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .anyRequest().authenticated())
-                .csrf(AbstractHttpConfigurer::disable)
-                .formLogin(AbstractHttpConfigurer::disable)
-                .logout(LogoutConfigurer::permitAll)
+                .csrf(AbstractHttpConfigurer::disable)          
+                .formLogin(form -> form.disable())
+                .logout(logout -> logout.disable())
                 .exceptionHandling(configurer -> configurer.authenticationEntryPoint(authEntryPoint))
         ;
         return http.build();

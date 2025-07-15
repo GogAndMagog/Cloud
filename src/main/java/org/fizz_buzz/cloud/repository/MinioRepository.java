@@ -14,15 +14,12 @@ import io.minio.errors.ErrorResponseException;
 import io.minio.messages.DeleteError;
 import io.minio.messages.DeleteObject;
 import io.minio.messages.Item;
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotEmpty;
-import jakarta.validation.constraints.Size;
-import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.fizz_buzz.cloud.dto.ResourceType;
 import org.fizz_buzz.cloud.dto.response.ResourceInfoResponseDTO;
-import org.fizz_buzz.cloud.validation.annotation.CorrectPath;
+import org.fizz_buzz.cloud.exception.EmptyPathException;
+import org.fizz_buzz.cloud.exception.ForbiddenSymbolException;
+import org.fizz_buzz.cloud.exception.S3RepositoryException;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 
@@ -31,6 +28,7 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.regex.Pattern;
 import java.util.zip.ZipInputStream;
 
 @Service
@@ -122,7 +120,7 @@ public class MinioRepository implements S3Repository {
     }
 
     @Override
-    public void deleteResource(String bucketName, @NotBlank @CorrectPath String path) {
+    public void deleteResource(String bucketName, String path) {
 
         try {
 
@@ -239,5 +237,56 @@ public class MinioRepository implements S3Repository {
         }
 
         return true;
+    }
+
+    private void isValidPath(String path) {
+
+        String forbiddenSymbols = "[/,\\,?,*,:,<,>,\",|]";
+
+        if (path == null || path.isBlank()) {
+            throw new EmptyPathException();
+        }
+
+        List<String> directories = new ArrayList<>();
+        int prevSlash = 0;
+
+        for (int i = 0; i < path.length(); i++) {
+
+            if (path.charAt(i) == '/') {
+                directories.add(path.substring(prevSlash, i));
+                prevSlash = i + 1;
+            }
+        }
+
+        if(directories.stream().anyMatch(String::isEmpty)) {
+            throw new EmptyPathException();
+        }
+
+        if (directories.stream().anyMatch(directory -> Pattern.matches(forbiddenSymbols, directory))){
+            throw new ForbiddenSymbolException();
+        }
+    }
+
+    private boolean isDirectoryExists(String bucket, String path) {
+
+        try {
+
+            return minioClient.statObject(StatObjectArgs
+                    .builder()
+                    .bucket(bucket)
+                    .object(path)
+                    .build()) != null;
+        }
+        catch (ErrorResponseException e){
+            if (e.errorResponse().code().equals("NoSuckKey")){
+                return false;
+            }
+            else {
+                throw new S3RepositoryException(e);
+            }
+        }
+        catch (Exception e) {
+            throw new S3RepositoryException(e);
+        }
     }
 }

@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.fizz_buzz.cloud.dto.request.UserRequestDTO;
 import org.fizz_buzz.cloud.dto.response.UserResponseDTO;
 import org.fizz_buzz.cloud.service.AuthService;
+import org.fizz_buzz.cloud.service.S3UserService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -23,15 +24,17 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthService authService;
+    private final S3UserService s3UserService;
     private final SecurityContextLogoutHandler logoutHandler = new SecurityContextLogoutHandler();
 
 
     @PostMapping(value = "/sign-up")
     public ResponseEntity<UserResponseDTO> signUp(@Valid @RequestBody UserRequestDTO request) {
 
-        var response = authService.signUp(request);
+        var user = authService.signUp(request);
+        s3UserService.createUserDirectory(user.getId());
 
-        return new ResponseEntity<>(response, HttpStatus.CREATED);
+        return new ResponseEntity<>(new UserResponseDTO(user.getName()), HttpStatus.CREATED);
     }
 
     @PostMapping(value = "/sign-in")

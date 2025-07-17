@@ -20,7 +20,7 @@ import org.fizz_buzz.cloud.dto.response.ResourceInfoResponseDTO;
 import org.fizz_buzz.cloud.exception.EmptyPathException;
 import org.fizz_buzz.cloud.exception.ForbiddenSymbolException;
 import org.fizz_buzz.cloud.exception.S3RepositoryException;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Repository;
 import org.springframework.validation.annotation.Validated;
 
 import java.io.ByteArrayInputStream;
@@ -31,7 +31,7 @@ import java.util.List;
 import java.util.regex.Pattern;
 import java.util.zip.ZipInputStream;
 
-@Service
+@Repository
 @RequiredArgsConstructor
 @Validated
 public class MinioRepository implements S3Repository {

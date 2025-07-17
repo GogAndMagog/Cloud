@@ -2,6 +2,7 @@ package org.fizz_buzz.cloud.service;
 
 import lombok.RequiredArgsConstructor;
 import org.fizz_buzz.cloud.repository.UserRepository;
+import org.fizz_buzz.cloud.security.ExtendedUserDetails;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -21,10 +22,11 @@ public class CustomUserDetailsService implements UserDetailsService {
         var userEntity = userRepository.findByName(username);
 
         return userEntity
-                .map(user -> User
-                        .withUsername(userEntity.get().getName())
-                        .password(userEntity.get().getPassword())
-                        .build())
+                .map(ExtendedUserDetails::new)
+//                .map(user -> User
+//                        .withUsername(userEntity.get().getName())
+//                        .password(userEntity.get().getPassword())
+//                        .build())
                 .orElseThrow(() -> new UsernameNotFoundException(username));
     }
 }

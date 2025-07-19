@@ -6,6 +6,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.fizz_buzz.cloud.dto.request.UserRequestDTO;
 import org.fizz_buzz.cloud.dto.response.UserResponseDTO;
+import org.fizz_buzz.cloud.security.CustomUserDetails;
 import org.fizz_buzz.cloud.service.AuthService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -55,7 +56,10 @@ public class AuthController {
     }
 
     @GetMapping
-    public ResponseEntity<String> getTest() {
-        return ResponseEntity.ok().body("Test");
+    public ResponseEntity<String> getTest(Authentication authentication ) {
+
+        var userId = ((CustomUserDetails) authentication.getPrincipal()).getId();
+
+        return ResponseEntity.ok().body("UserID: %d".formatted(userId));
     }
 }

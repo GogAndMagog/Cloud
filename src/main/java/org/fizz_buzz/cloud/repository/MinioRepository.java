@@ -19,6 +19,7 @@ import org.fizz_buzz.cloud.dto.ResourceType;
 import org.fizz_buzz.cloud.dto.response.ResourceInfoResponseDTO;
 import org.fizz_buzz.cloud.exception.EmptyPathException;
 import org.fizz_buzz.cloud.exception.ForbiddenSymbolException;
+import org.fizz_buzz.cloud.exception.ResourceNotFound;
 import org.fizz_buzz.cloud.exception.S3RepositoryException;
 import org.springframework.stereotype.Repository;
 import org.springframework.validation.annotation.Validated;
@@ -97,6 +98,8 @@ public class MinioRepository implements S3Repository {
     @Override
     public ResourceInfoResponseDTO getResourceInfo(String bucketName, String path) {
 
+        isValidPath(path);
+
         var items = minioClient.listObjects(ListObjectsArgs.builder()
                 .bucket(bucketName)
                 .prefix(path)
@@ -115,7 +118,7 @@ public class MinioRepository implements S3Repository {
                 throw new RuntimeException(e);
             }
         } else {
-            throw new RuntimeException();
+            throw new ResourceNotFound(path);
         }
     }
 
@@ -241,13 +244,14 @@ public class MinioRepository implements S3Repository {
 
     private void isValidPath(String path) {
 
-        String forbiddenSymbols = "[/,\\,?,*,:,<,>,\",|]";
+        String forbiddenSymbols = ".*[\\\\/?*:<>\"|].*";
 
         if (path == null || path.isBlank()) {
             throw new EmptyPathException();
         }
 
         List<String> directories = new ArrayList<>();
+        String fileName = "";
         int prevSlash = 0;
 
         for (int i = 0; i < path.length(); i++) {
@@ -264,6 +268,14 @@ public class MinioRepository implements S3Repository {
 
         if (directories.stream().anyMatch(directory -> Pattern.matches(forbiddenSymbols, directory))){
             throw new ForbiddenSymbolException();
+        }
+
+        if (!path.endsWith("/")){
+            fileName = path.substring(prevSlash);
+
+            if (Pattern.matches(forbiddenSymbols, fileName)){
+                throw new ForbiddenSymbolException();
+            }
         }
     }
 

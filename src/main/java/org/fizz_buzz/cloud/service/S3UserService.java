@@ -1,5 +1,7 @@
 package org.fizz_buzz.cloud.service;
 
+import org.fizz_buzz.cloud.dto.response.ResourceInfoResponseDTO;
+import org.fizz_buzz.cloud.exception.ResourceNotFound;
 import org.fizz_buzz.cloud.repository.S3Repository;
 import org.springframework.stereotype.Service;
 
@@ -15,14 +17,30 @@ public class S3UserService {
         this.s3Repository = s3Repository;
     }
 
-    public void createUserBucketIfNotExist(){
+    public void createUserBucketIfNotExist() {
 
-        if (!s3Repository.isBucketExists(DEFAULT_BUCKET_NAME)){
+        if (!s3Repository.isBucketExists(DEFAULT_BUCKET_NAME)) {
             s3Repository.createBucket(DEFAULT_BUCKET_NAME);
         }
     }
 
-    public void createUserDirectory(long userId){
+    public ResourceInfoResponseDTO getResource(long userId, String resourcePath) {
+
+        try {
+
+            var response = s3Repository.getResourceInfo(DEFAULT_BUCKET_NAME,
+                    USER_DIRECTORY.formatted(userId).concat(resourcePath));
+
+            return new ResourceInfoResponseDTO(response.path().substring(USER_DIRECTORY.formatted(userId).length()),
+                    response.name(),
+                    response.size(),
+                    response.type());
+        } catch (ResourceNotFound e) {
+            throw new ResourceNotFound(resourcePath);
+        }
+    }
+
+    public void createUserDirectory(long userId) {
 
         s3Repository.createDirectory(DEFAULT_BUCKET_NAME, USER_DIRECTORY.formatted(userId));
     }

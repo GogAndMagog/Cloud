@@ -1,6 +1,9 @@
 package org.fizz_buzz.cloud.controller;
 
 import org.fizz_buzz.cloud.dto.MessageDTO;
+import org.fizz_buzz.cloud.exception.EmptyPathException;
+import org.fizz_buzz.cloud.exception.ForbiddenSymbolException;
+import org.fizz_buzz.cloud.exception.ResourceNotFound;
 import org.fizz_buzz.cloud.exception.UserAlreadyExists;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
@@ -45,14 +48,28 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(AccessDeniedException.class)
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
-    public MessageDTO handleAccessDeniedException(AccessDeniedException e){
+    public MessageDTO handleAccessDeniedException(AccessDeniedException e) {
 
         return new MessageDTO(e.getMessage());
     }
 
     @ExceptionHandler(AuthenticationException.class)
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
-    public MessageDTO handleAuthenticationException (AuthenticationException e){
+    public MessageDTO handleAuthenticationException(AuthenticationException e) {
+
+        return new MessageDTO(e.getMessage());
+    }
+
+    @ExceptionHandler({EmptyPathException.class, ForbiddenSymbolException.class})
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public MessageDTO handlePathValidationException(RuntimeException e) {
+
+        return new MessageDTO(e.getMessage());
+    }
+
+    @ExceptionHandler(ResourceNotFound.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public MessageDTO handleResourceNotFoundException(ResourceNotFound e) {
 
         return new MessageDTO(e.getMessage());
     }

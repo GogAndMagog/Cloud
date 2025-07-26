@@ -1,13 +1,18 @@
 package org.fizz_buzz.cloud.controller;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotEmpty;
 import lombok.RequiredArgsConstructor;
 import org.fizz_buzz.cloud.dto.response.ResourceInfoResponseDTO;
 import org.fizz_buzz.cloud.security.CustomUserDetails;
 import org.fizz_buzz.cloud.service.S3UserService;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -25,5 +30,15 @@ public class ResourceController {
         var userId = ((CustomUserDetails) authentication.getPrincipal()).getId();
 
         return s3UserService.getResource(userId, path);
+    }
+
+    @DeleteMapping
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteResource(@RequestParam(name = "path") String path,
+                               Authentication authentication){
+
+        var userId = ((CustomUserDetails) authentication.getPrincipal()).getId();
+
+        s3UserService.deleteResource(userId, path);
     }
 }

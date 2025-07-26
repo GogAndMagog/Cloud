@@ -125,6 +125,8 @@ public class MinioRepository implements S3Repository {
     @Override
     public void deleteResource(String bucketName, String path) {
 
+        isValidPath(path);
+
         try {
 
             if (path.endsWith("/")) {

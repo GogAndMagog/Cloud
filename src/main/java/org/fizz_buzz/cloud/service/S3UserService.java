@@ -40,6 +40,16 @@ public class S3UserService {
         }
     }
 
+    public void deleteResource(long userId, String resourcePath) {
+
+        if (!s3Repository.isObjectExists(DEFAULT_BUCKET_NAME, USER_DIRECTORY.formatted(userId).concat(resourcePath))) {
+
+            throw new ResourceNotFound(resourcePath);
+        }
+
+        s3Repository.deleteResource(DEFAULT_BUCKET_NAME, USER_DIRECTORY.formatted(userId).concat(resourcePath));
+    }
+
     public void createUserDirectory(long userId) {
 
         s3Repository.createDirectory(DEFAULT_BUCKET_NAME, USER_DIRECTORY.formatted(userId));

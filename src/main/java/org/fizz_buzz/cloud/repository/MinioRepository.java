@@ -1,6 +1,7 @@
 package org.fizz_buzz.cloud.repository;
 
 import io.minio.BucketExistsArgs;
+import io.minio.GetObjectArgs;
 import io.minio.ListObjectsArgs;
 import io.minio.MakeBucketArgs;
 import io.minio.MinioClient;
@@ -25,12 +26,17 @@ import org.springframework.stereotype.Repository;
 import org.springframework.validation.annotation.Validated;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.FileOutputStream;
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.regex.Pattern;
 import java.util.zip.ZipInputStream;
+import java.util.zip.ZipOutputStream;
 
 @Repository
 @RequiredArgsConstructor
@@ -166,10 +172,38 @@ public class MinioRepository implements S3Repository {
     }
 
     @Override
-    public ZipInputStream download(String path, InputStream inputStream) {
+    public OutputStream download(String bucket, String path) {
 
+        isValidPath(path);
 
-        return null;
+        try {
+
+            OutputStream response;
+
+            if (isDirectory(path)) {
+
+                response = new ZipOutputStream(System.out);
+            } else {
+
+                response = new ByteArrayOutputStream();
+
+                minioClient.getObject(GetObjectArgs.builder()
+                        .bucket(bucket)
+                        .object(path)
+                        .build()).transferTo(response);
+            }
+
+            return response;
+        } catch (ErrorResponseException e) {
+            if (e.errorResponse().code().equals("NoSuckKey")) {
+                throw new ResourceNotFound(path);
+            } else {
+                throw new S3RepositoryException(e);
+            }
+        }
+        catch (Exception e) {
+            throw new S3RepositoryException(e);
+        }
     }
 
     @Override
@@ -264,18 +298,18 @@ public class MinioRepository implements S3Repository {
             }
         }
 
-        if(directories.stream().anyMatch(String::isEmpty)) {
+        if (directories.stream().anyMatch(String::isEmpty)) {
             throw new EmptyPathException();
         }
 
-        if (directories.stream().anyMatch(directory -> Pattern.matches(forbiddenSymbols, directory))){
+        if (directories.stream().anyMatch(directory -> Pattern.matches(forbiddenSymbols, directory))) {
             throw new ForbiddenSymbolException();
         }
 
-        if (!path.endsWith("/")){
+        if (!path.endsWith("/")) {
             fileName = path.substring(prevSlash);
 
-            if (Pattern.matches(forbiddenSymbols, fileName)){
+            if (Pattern.matches(forbiddenSymbols, fileName)) {
                 throw new ForbiddenSymbolException();
             }
         }
@@ -290,17 +324,19 @@ public class MinioRepository implements S3Repository {
                     .bucket(bucket)
                     .object(path)
                     .build()) != null;
-        }
-        catch (ErrorResponseException e){
-            if (e.errorResponse().code().equals("NoSuckKey")){
+        } catch (ErrorResponseException e) {
+            if (e.errorResponse().code().equals("NoSuckKey")) {
                 return false;
-            }
-            else {
+            } else {
                 throw new S3RepositoryException(e);
             }
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             throw new S3RepositoryException(e);
         }
+    }
+
+    private boolean isDirectory(String path) {
+
+        return path.endsWith("/");
     }
 }

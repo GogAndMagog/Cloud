@@ -5,6 +5,9 @@ import org.fizz_buzz.cloud.exception.ResourceNotFound;
 import org.fizz_buzz.cloud.repository.S3Repository;
 import org.springframework.stereotype.Service;
 
+import java.io.OutputStream;
+import java.util.zip.ZipOutputStream;
+
 @Service
 public class S3UserService {
 
@@ -53,5 +56,10 @@ public class S3UserService {
     public void createUserDirectory(long userId) {
 
         s3Repository.createDirectory(DEFAULT_BUCKET_NAME, USER_DIRECTORY.formatted(userId));
+    }
+
+    public OutputStream downloadResource(long userId, String resourcePath) {
+
+        return s3Repository.download(DEFAULT_BUCKET_NAME, USER_DIRECTORY.formatted(userId).concat(resourcePath));
     }
 }

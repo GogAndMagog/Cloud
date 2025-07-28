@@ -172,30 +172,28 @@ public class MinioRepository implements S3Repository {
     }
 
     @Override
-    public OutputStream download(String bucket, String path) {
+    public InputStream download(String bucket, String path) {
 
         isValidPath(path);
 
         try {
 
-            OutputStream response;
+            InputStream response;
 
             if (isDirectory(path)) {
 
-                response = new ZipOutputStream(System.out);
+                response = new ZipInputStream(System.in);
             } else {
 
-                response = new ByteArrayOutputStream();
-
-                minioClient.getObject(GetObjectArgs.builder()
+                response = minioClient.getObject(GetObjectArgs.builder()
                         .bucket(bucket)
                         .object(path)
-                        .build()).transferTo(response);
+                        .build());
             }
 
             return response;
         } catch (ErrorResponseException e) {
-            if (e.errorResponse().code().equals("NoSuckKey")) {
+            if (e.errorResponse().code().equals("NoSuchKey")) {
                 throw new ResourceNotFound(path);
             } else {
                 throw new S3RepositoryException(e);

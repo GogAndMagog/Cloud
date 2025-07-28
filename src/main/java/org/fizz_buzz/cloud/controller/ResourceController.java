@@ -23,6 +23,7 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 import java.io.ByteArrayOutputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -37,7 +38,7 @@ public class ResourceController {
 
     @GetMapping
     public ResourceInfoResponseDTO getResource(@RequestParam(name = "path") String path,
-                                               Authentication authentication){
+                                               Authentication authentication) {
 
         var userId = ((CustomUserDetails) authentication.getPrincipal()).getId();
 
@@ -47,7 +48,7 @@ public class ResourceController {
     @DeleteMapping
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteResource(@RequestParam(name = "path") String path,
-                               Authentication authentication){
+                               Authentication authentication) {
 
         var userId = ((CustomUserDetails) authentication.getPrincipal()).getId();
 
@@ -56,19 +57,24 @@ public class ResourceController {
 
     @GetMapping(value = "/download",
             produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
-    public ResponseEntity<byte[]> downloadResource(@RequestParam(name = "path") String path,
-                                                   Authentication authentication) throws IOException {
+    public ResponseEntity<StreamingResponseBody> downloadResource(@RequestParam(name = "path") String path,
+                                                                  Authentication authentication) {
 
         var userId = ((CustomUserDetails) authentication.getPrincipal()).getId();
 
-        try (var resource = s3UserService.downloadResource(userId, path)) {
-//            ZipOutputStream zip = new ZipOutputStream(System.out);
+        StreamingResponseBody responseBody = outputStream -> {
+            try (var resource = s3UserService.downloadResource(userId, path)) {
 
-//            return  ((ByteArrayOutputStream) resource).toByteArray();
-            return ResponseEntity.ok()
-                    .contentLength(((ByteArrayOutputStream) resource).toByteArray().length)
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"%s\"".formatted(path))
-                    .body(((ByteArrayOutputStream) resource).toByteArray());
-        }
+                byte[] buffer = new byte[1024];
+                int bytesRead;
+                while ((bytesRead = resource.read(buffer)) != -1) {
+                    outputStream.write(buffer, 0, bytesRead);
+                }
+            }
+        };
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"%s\"".formatted(path))
+                .body(responseBody);
     }
 }

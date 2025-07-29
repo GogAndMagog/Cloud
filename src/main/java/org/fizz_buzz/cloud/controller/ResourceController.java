@@ -1,7 +1,5 @@
 package org.fizz_buzz.cloud.controller;
 
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotEmpty;
 import lombok.RequiredArgsConstructor;
 import org.fizz_buzz.cloud.dto.response.ResourceInfoResponseDTO;
 import org.fizz_buzz.cloud.security.CustomUserDetails;
@@ -11,22 +9,17 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
-import java.io.ByteArrayOutputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 @RestController
 @RequiredArgsConstructor
@@ -38,43 +31,38 @@ public class ResourceController {
 
     @GetMapping
     public ResourceInfoResponseDTO getResource(@RequestParam(name = "path") String path,
-                                               Authentication authentication) {
+                                               @AuthenticationPrincipal CustomUserDetails userDetails) {
 
-        var userId = ((CustomUserDetails) authentication.getPrincipal()).getId();
-
-        return s3UserService.getResource(userId, path);
+        return s3UserService.getResource(userDetails.getId(), path);
     }
 
     @DeleteMapping
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteResource(@RequestParam(name = "path") String path,
-                               Authentication authentication) {
+                               @AuthenticationPrincipal CustomUserDetails userDetails) {
 
-        var userId = ((CustomUserDetails) authentication.getPrincipal()).getId();
-
-        s3UserService.deleteResource(userId, path);
+        s3UserService.deleteResource(userDetails.getId(), path);
     }
 
-    @GetMapping(value = "/download",
-            produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
+    @GetMapping(value = "/download", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
     public ResponseEntity<StreamingResponseBody> downloadResource(@RequestParam(name = "path") String path,
-                                                                  Authentication authentication) {
+                                                                  Authentication authentication,
+                                                                  @AuthenticationPrincipal CustomUserDetails userDetails) {
 
-        var userId = ((CustomUserDetails) authentication.getPrincipal()).getId();
+        StreamingResponseBody streamingResponseBody = s3UserService.downloadResource(userDetails.getId(), path);
 
-        StreamingResponseBody responseBody = outputStream -> {
-            try (var resource = s3UserService.downloadResource(userId, path)) {
+        Path entirePath = Paths.get(path);
+        String fileName;
 
-                byte[] buffer = new byte[1024];
-                int bytesRead;
-                while ((bytesRead = resource.read(buffer)) != -1) {
-                    outputStream.write(buffer, 0, bytesRead);
-                }
-            }
-        };
+        if (path.endsWith("/")){
+            fileName = entirePath.getFileName().toString().concat(".zip");
+        }
+        else {
+            fileName = entirePath.getFileName().toString();
+        }
 
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"%s\"".formatted(path))
-                .body(responseBody);
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"%s\"".formatted(fileName))
+                .body(streamingResponseBody);
     }
 }

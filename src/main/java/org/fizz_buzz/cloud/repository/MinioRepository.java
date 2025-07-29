@@ -22,6 +22,7 @@ import org.fizz_buzz.cloud.exception.EmptyPathException;
 import org.fizz_buzz.cloud.exception.ForbiddenSymbolException;
 import org.fizz_buzz.cloud.exception.ResourceNotFound;
 import org.fizz_buzz.cloud.exception.S3RepositoryException;
+import org.fizz_buzz.cloud.model.Resource;
 import org.springframework.stereotype.Repository;
 import org.springframework.validation.annotation.Validated;
 
@@ -172,7 +173,9 @@ public class MinioRepository implements S3Repository {
     }
 
     @Override
-    public InputStream download(String bucket, String path) {
+    public List<Resource> download(String bucket, String path) {
+
+        List<Resource> resources = new ArrayList<>();
 
         isValidPath(path);
 
@@ -182,16 +185,32 @@ public class MinioRepository implements S3Repository {
 
             if (isDirectory(path)) {
 
-                response = new ZipInputStream(System.in);
+                var objects =  minioClient.listObjects(ListObjectsArgs.builder()
+                        .bucket(bucket)
+                        .prefix(path)
+                        .recursive(true)
+                        .build());
+
+                for (Result<Item> object : objects) {
+
+                    response = minioClient.getObject(GetObjectArgs.builder()
+                            .bucket(bucket)
+                            .object(object.get().objectName())
+                            .build());
+
+                    resources.add(new Resource(object.get().objectName(), response));
+                }
             } else {
 
                 response = minioClient.getObject(GetObjectArgs.builder()
                         .bucket(bucket)
                         .object(path)
                         .build());
+
+                resources.add(new Resource(path, response));
             }
 
-            return response;
+            return resources;
         } catch (ErrorResponseException e) {
             if (e.errorResponse().code().equals("NoSuchKey")) {
                 throw new ResourceNotFound(path);

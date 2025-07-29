@@ -1,6 +1,7 @@
 package org.fizz_buzz.cloud.repository;
 
 import org.fizz_buzz.cloud.dto.response.ResourceInfoResponseDTO;
+import org.fizz_buzz.cloud.model.Resource;
 
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -14,7 +15,7 @@ public interface S3Repository {
     boolean isBucketExists(String bucketName);
     ResourceInfoResponseDTO getResourceInfo(String bucketName, String path);
     void deleteResource(String bucketName, String path);
-    InputStream download(String bucket, String path);
+    List<Resource> download(String bucket, String path);
     ResourceInfoResponseDTO move(String from, String to);
     List<ResourceInfoResponseDTO> search(String path);
     List<ResourceInfoResponseDTO> upload(String path);

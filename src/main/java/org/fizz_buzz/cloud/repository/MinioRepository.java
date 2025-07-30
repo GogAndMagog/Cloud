@@ -16,7 +16,6 @@ import io.minio.messages.DeleteError;
 import io.minio.messages.DeleteObject;
 import io.minio.messages.Item;
 import lombok.RequiredArgsConstructor;
-import org.fizz_buzz.cloud.dto.ResourceType;
 import org.fizz_buzz.cloud.dto.response.ResourceInfoResponseDTO;
 import org.fizz_buzz.cloud.exception.EmptyPathException;
 import org.fizz_buzz.cloud.exception.ForbiddenSymbolException;
@@ -27,17 +26,10 @@ import org.springframework.stereotype.Repository;
 import org.springframework.validation.annotation.Validated;
 
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.FileOutputStream;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.regex.Pattern;
-import java.util.zip.ZipInputStream;
-import java.util.zip.ZipOutputStream;
 
 @Repository
 @RequiredArgsConstructor
@@ -103,30 +95,30 @@ public class MinioRepository implements S3Repository {
     }
 
     @Override
-    public ResourceInfoResponseDTO getResourceInfo(String bucketName, String path) {
+    public List<String> findAllNamesByPrefix(String bucket, String prefix) {
 
-        isValidPath(path);
+        List<String> names = new ArrayList<>();
 
-        var items = minioClient.listObjects(ListObjectsArgs.builder()
-                .bucket(bucketName)
-                .prefix(path)
+        var directoryObjects = minioClient.listObjects(ListObjectsArgs
+                .builder()
+                .bucket(bucket)
+                .prefix(prefix)
+                .recursive(true)
                 .build());
 
-        if (items.iterator().hasNext()) {
+
+        for (Result<Item> directoryObject : directoryObjects) {
 
             try {
-                String folderPath = path.substring(0, path.lastIndexOf("/") + 1);
-                String fileName = path.substring(path.lastIndexOf("/") + 1);
-                long size = items.iterator().next().get().size();
-                ResourceType type = path.endsWith("/") ? ResourceType.DIRECTORY : ResourceType.FILE;
 
-                return new ResourceInfoResponseDTO(folderPath, fileName, size, type);
+                names.add(directoryObject.get().objectName());
             } catch (Exception e) {
-                throw new RuntimeException(e);
+
+                throw new S3RepositoryException(e);
             }
-        } else {
-            throw new ResourceNotFound(path);
         }
+
+        return names;
     }
 
     @Override
@@ -173,52 +165,35 @@ public class MinioRepository implements S3Repository {
     }
 
     @Override
-    public List<Resource> download(String bucket, String path) {
-
-        List<Resource> resources = new ArrayList<>();
-
-        isValidPath(path);
+    public Resource getResourceByPath(String bucket, String path) {
 
         try {
 
-            InputStream response;
+            var objectStream = minioClient.getObject(GetObjectArgs.builder()
+                    .bucket(bucket)
+                    .object(path)
+                    .build());
 
-            if (isDirectory(path)) {
+            var objects = minioClient.listObjects(ListObjectsArgs.builder()
+                    .bucket(bucket)
+                    .prefix(path)
+                    .build());
 
-                var objects =  minioClient.listObjects(ListObjectsArgs.builder()
-                        .bucket(bucket)
-                        .prefix(path)
-                        .recursive(true)
-                        .build());
+            if (objects.iterator().hasNext()) {
 
-                for (Result<Item> object : objects) {
+                var objectInfo = objects.iterator().next();
 
-                    response = minioClient.getObject(GetObjectArgs.builder()
-                            .bucket(bucket)
-                            .object(object.get().objectName())
-                            .build());
-
-                    resources.add(new Resource(object.get().objectName(), response));
-                }
+                return new Resource(objectStream.object(), objectStream, objectInfo.get().size());
             } else {
-
-                response = minioClient.getObject(GetObjectArgs.builder()
-                        .bucket(bucket)
-                        .object(path)
-                        .build());
-
-                resources.add(new Resource(path, response));
+                throw new ResourceNotFound(path);
             }
-
-            return resources;
         } catch (ErrorResponseException e) {
             if (e.errorResponse().code().equals("NoSuchKey")) {
                 throw new ResourceNotFound(path);
             } else {
                 throw new S3RepositoryException(e);
             }
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             throw new S3RepositoryException(e);
         }
     }
@@ -330,30 +305,5 @@ public class MinioRepository implements S3Repository {
                 throw new ForbiddenSymbolException();
             }
         }
-    }
-
-    private boolean isDirectoryExists(String bucket, String path) {
-
-        try {
-
-            return minioClient.statObject(StatObjectArgs
-                    .builder()
-                    .bucket(bucket)
-                    .object(path)
-                    .build()) != null;
-        } catch (ErrorResponseException e) {
-            if (e.errorResponse().code().equals("NoSuckKey")) {
-                return false;
-            } else {
-                throw new S3RepositoryException(e);
-            }
-        } catch (Exception e) {
-            throw new S3RepositoryException(e);
-        }
-    }
-
-    private boolean isDirectory(String path) {
-
-        return path.endsWith("/");
     }
 }

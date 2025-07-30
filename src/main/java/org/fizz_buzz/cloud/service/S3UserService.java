@@ -1,5 +1,6 @@
 package org.fizz_buzz.cloud.service;
 
+import org.fizz_buzz.cloud.dto.ResourceType;
 import org.fizz_buzz.cloud.dto.response.ResourceInfoResponseDTO;
 import org.fizz_buzz.cloud.exception.ResourceNotFound;
 import org.fizz_buzz.cloud.model.Resource;
@@ -10,10 +11,9 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.file.Files;
-import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -41,13 +41,13 @@ public class S3UserService {
 
         try {
 
-            var response = s3Repository.getResourceInfo(DEFAULT_BUCKET_NAME,
+            var resource = s3Repository.getResourceByPath(DEFAULT_BUCKET_NAME,
                     USER_DIRECTORY.formatted(userId).concat(resourcePath));
 
-            return new ResourceInfoResponseDTO(response.path().substring(USER_DIRECTORY.formatted(userId).length()),
-                    response.name(),
-                    response.size(),
-                    response.type());
+            return new ResourceInfoResponseDTO(resource.path().substring(USER_DIRECTORY.formatted(userId).length()),
+                    resource.path(),
+                    resource.size(),
+                    isDirectory(resource.path()) ? ResourceType.DIRECTORY : ResourceType.FILE);
         } catch (ResourceNotFound e) {
             throw new ResourceNotFound(resourcePath);
         }
@@ -73,7 +73,12 @@ public class S3UserService {
         // Needed for correct queries to Minio
         String technicalPath = USER_DIRECTORY.formatted(userId).concat(resourcePath);
 
-        List<Resource> resources = s3Repository.download(DEFAULT_BUCKET_NAME, technicalPath);
+        List<Resource> resources = new ArrayList<>();
+        List<String> resourcesNames = s3Repository.findAllNamesByPrefix(DEFAULT_BUCKET_NAME, technicalPath);
+
+        for (String resourcesName : resourcesNames) {
+            resources.add(s3Repository.getResourceByPath(DEFAULT_BUCKET_NAME, resourcesName));
+        }
 
         // redundantOffset needed to cut unnecessary information about user directory and directories
         // that higher than target directory
@@ -126,5 +131,10 @@ public class S3UserService {
         while ((bytesRead = is.read(buffer)) != -1) {
             os.write(buffer, 0, bytesRead);
         }
+    }
+
+    private boolean isDirectory(String path){
+
+        return path.endsWith("/");
     }
 }

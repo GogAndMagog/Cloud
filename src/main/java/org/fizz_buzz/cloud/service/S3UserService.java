@@ -45,10 +45,7 @@ public class S3UserService {
             var resource = s3Repository.getResourceByPath(DEFAULT_BUCKET_NAME,
                     USER_DIRECTORY.formatted(userId).concat(resourcePath));
 
-            return new ResourceInfoResponseDTO(resource.path().substring(USER_DIRECTORY.formatted(userId).length()),
-                    resource.path(),
-                    resource.size(),
-                    isDirectory(resource.path()) ? ResourceType.DIRECTORY : ResourceType.FILE);
+            return resourceToResourceInfoResponseDTO(userId, resource);
         } catch (ResourceNotFound e) {
             throw new ResourceNotFound(resourcePath);
         }

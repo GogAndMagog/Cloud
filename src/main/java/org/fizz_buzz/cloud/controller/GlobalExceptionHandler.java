@@ -3,6 +3,7 @@ package org.fizz_buzz.cloud.controller;
 import org.fizz_buzz.cloud.dto.MessageDTO;
 import org.fizz_buzz.cloud.exception.EmptyPathException;
 import org.fizz_buzz.cloud.exception.ForbiddenSymbolException;
+import org.fizz_buzz.cloud.exception.ResourceAlreadyExistsException;
 import org.fizz_buzz.cloud.exception.ResourceNotFound;
 import org.fizz_buzz.cloud.exception.UserAlreadyExists;
 import org.springframework.http.HttpStatus;
@@ -80,5 +81,12 @@ public class GlobalExceptionHandler {
     public MessageDTO handleMissingField(MissingServletRequestParameterException e) {
 
         return new MessageDTO("Missing parameter \"%s\"".formatted(e.getParameterName()));
+    }
+
+    @ExceptionHandler(ResourceAlreadyExistsException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public MessageDTO handleResourceAlreadyExistsException(ResourceAlreadyExistsException e) {
+
+        return new MessageDTO(e.getMessage());
     }
 }

@@ -3,6 +3,7 @@ package org.fizz_buzz.cloud.repository;
 import org.fizz_buzz.cloud.dto.response.ResourceInfoResponseDTO;
 import org.fizz_buzz.cloud.model.Resource;
 
+import java.io.InputStream;
 import java.util.List;
 
 public interface S3Repository {
@@ -13,6 +14,7 @@ public interface S3Repository {
     void deleteResource(String bucketName, String path);
     List<String> findAllNamesByPrefix(String bucket, String prefix);
     Resource getResourceByPath(String bucket, String path);
+    void saveResource(String bucket, String path, InputStream dataStream);
     ResourceInfoResponseDTO move(String from, String to);
     List<ResourceInfoResponseDTO> search(String path);
     List<ResourceInfoResponseDTO> upload(String path);

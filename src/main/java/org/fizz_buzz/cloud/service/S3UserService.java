@@ -2,6 +2,7 @@ package org.fizz_buzz.cloud.service;
 
 import org.fizz_buzz.cloud.dto.ResourceType;
 import org.fizz_buzz.cloud.dto.response.ResourceInfoResponseDTO;
+import org.fizz_buzz.cloud.exception.ResourceAlreadyExistsException;
 import org.fizz_buzz.cloud.exception.ResourceNotFound;
 import org.fizz_buzz.cloud.model.Resource;
 import org.fizz_buzz.cloud.repository.S3Repository;
@@ -124,6 +125,71 @@ public class S3UserService {
         };
     }
 
+    public ResourceInfoResponseDTO moveResource(long userId, String oldPath, String newPath) {
+
+        String oldTechnicalPath = USER_DIRECTORY.formatted(userId).concat(oldPath);
+        String newTechnicalPath = USER_DIRECTORY.formatted(userId).concat(newPath);
+
+        if (!s3Repository.isObjectExists(DEFAULT_BUCKET_NAME, oldTechnicalPath)) {
+
+            throw new ResourceNotFound(oldPath);
+        }
+
+        if (s3Repository.isObjectExists(DEFAULT_BUCKET_NAME, newTechnicalPath)) {
+
+            throw new ResourceAlreadyExistsException(newPath);
+        }
+
+        Resource resource;
+
+        if (isDirectory(oldPath)){
+
+            List<String> names = s3Repository.findAllNamesByPrefix(DEFAULT_BUCKET_NAME, oldTechnicalPath);
+
+            for (String name : names) {
+
+                resource = s3Repository.getResourceByPath(DEFAULT_BUCKET_NAME, name);
+                s3Repository.saveResource(DEFAULT_BUCKET_NAME,
+                        name.replace(oldTechnicalPath, newTechnicalPath),
+                        resource.dataStream());
+            }
+        }
+        else {
+
+            resource = s3Repository.getResourceByPath(DEFAULT_BUCKET_NAME, oldTechnicalPath);
+            s3Repository.saveResource(DEFAULT_BUCKET_NAME, newTechnicalPath, resource.dataStream());
+        }
+
+        s3Repository.deleteResource(DEFAULT_BUCKET_NAME, oldTechnicalPath);
+
+        resource = s3Repository.getResourceByPath(DEFAULT_BUCKET_NAME, newTechnicalPath);
+
+        return resourceToResourceInfoResponseDTO(userId, resource);
+    }
+
+    private ResourceInfoResponseDTO resourceToResourceInfoResponseDTO(long userId, Resource resource) {
+
+        Path fullPath = Paths.get(resource.path());
+
+        ResourceType resourceType = isDirectory(resource.path()) ? ResourceType.DIRECTORY : ResourceType.FILE;
+        String path;
+        String fileName;
+
+        if (resourceType == ResourceType.DIRECTORY) {
+
+            fileName = "";
+            path = resource.path().substring(USER_DIRECTORY.formatted(userId).length());
+        } else {
+
+            fileName = fullPath.getFileName().toString();
+            path = resource.path().substring(USER_DIRECTORY.formatted(userId).length(),
+                    resource.path().length() - fileName.length());
+        }
+
+
+        return new ResourceInfoResponseDTO(path, fileName, resource.size(), resourceType);
+    }
+
     private void writeStream(OutputStream os, InputStream is) throws IOException {
 
         byte[] buffer = new byte[1024];
@@ -133,7 +199,7 @@ public class S3UserService {
         }
     }
 
-    private boolean isDirectory(String path){
+    private boolean isDirectory(String path) {
 
         return path.endsWith("/");
     }

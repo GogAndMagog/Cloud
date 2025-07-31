@@ -8,7 +8,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -46,7 +45,6 @@ public class ResourceController {
 
     @GetMapping(value = "/download", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
     public ResponseEntity<StreamingResponseBody> downloadResource(@RequestParam(name = "path") String path,
-                                                                  Authentication authentication,
                                                                   @AuthenticationPrincipal CustomUserDetails userDetails) {
 
         StreamingResponseBody streamingResponseBody = s3UserService.downloadResource(userDetails.getId(), path);
@@ -64,5 +62,13 @@ public class ResourceController {
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"%s\"".formatted(fileName))
                 .body(streamingResponseBody);
+    }
+
+    @GetMapping("/move")
+    public ResourceInfoResponseDTO move(@RequestParam(name = "from") String from,
+                                        @RequestParam(name = "to") String to,
+                                        @AuthenticationPrincipal CustomUserDetails userDetails) {
+
+        return s3UserService.moveResource(userDetails.getId(), from, to);
     }
 }

@@ -26,6 +26,7 @@ import org.springframework.stereotype.Repository;
 import org.springframework.validation.annotation.Validated;
 
 import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -198,6 +199,21 @@ public class MinioRepository implements S3Repository {
         }
     }
 
+    public void saveResource(String bucket, String path, InputStream dataStream) {
+
+        try {
+
+            minioClient.putObject(PutObjectArgs
+                    .builder()
+                    .bucket(bucket)
+                    .object(path)
+                    .stream(dataStream, -1, 10485760)
+                    .build());
+        } catch (Exception e) {
+            throw new S3RepositoryException(e);
+        }
+    }
+
     @Override
     public ResourceInfoResponseDTO move(String from, String to) {
         return null;
@@ -250,8 +266,9 @@ public class MinioRepository implements S3Repository {
 
     public boolean isObjectExists(String bucketName, String path) {
 
-        try {
+        isValidPath(path);
 
+        try {
             minioClient.statObject(StatObjectArgs.builder()
                     .bucket(bucketName)
                     .object(path)

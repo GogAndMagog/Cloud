@@ -1,5 +1,8 @@
 package org.fizz_buzz.cloud.controller;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import lombok.RequiredArgsConstructor;
 import org.fizz_buzz.cloud.dto.response.ResourceInfoResponseDTO;
 import org.fizz_buzz.cloud.security.CustomUserDetails;
@@ -19,6 +22,7 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -29,7 +33,9 @@ public class ResourceController {
 
 
     @GetMapping
-    public ResourceInfoResponseDTO getResource(@RequestParam(name = "path") String path,
+    public ResourceInfoResponseDTO getResource(@Valid
+                                               @RequestParam(name = "path")
+                                               @NotBlank(message = "Parameter \"path\" must not be blank") String path,
                                                @AuthenticationPrincipal CustomUserDetails userDetails) {
 
         return s3UserService.getResource(userDetails.getId(), path);
@@ -37,7 +43,9 @@ public class ResourceController {
 
     @DeleteMapping
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteResource(@RequestParam(name = "path") String path,
+    public void deleteResource(@Valid
+                               @RequestParam(name = "path")
+                               @NotBlank(message = "Parameter \"path\" must not be blank") String path,
                                @AuthenticationPrincipal CustomUserDetails userDetails) {
 
         s3UserService.deleteResource(userDetails.getId(), path);
@@ -52,10 +60,9 @@ public class ResourceController {
         Path entirePath = Paths.get(path);
         String fileName;
 
-        if (path.endsWith("/")){
+        if (path.endsWith("/")) {
             fileName = entirePath.getFileName().toString().concat(".zip");
-        }
-        else {
+        } else {
             fileName = entirePath.getFileName().toString();
         }
 
@@ -65,10 +72,24 @@ public class ResourceController {
     }
 
     @GetMapping("/move")
-    public ResourceInfoResponseDTO move(@RequestParam(name = "from") String from,
-                                        @RequestParam(name = "to") String to,
+    public ResourceInfoResponseDTO move(@Valid
+                                        @RequestParam(name = "from")
+                                        @NotBlank(message = "Parameter \"from\" must not be blank") String from,
+                                        @Valid
+                                        @RequestParam(name = "to")
+                                        @NotBlank(message = "Parameter \"to\" must not be blank") String to,
                                         @AuthenticationPrincipal CustomUserDetails userDetails) {
 
         return s3UserService.moveResource(userDetails.getId(), from, to);
+    }
+
+    @GetMapping("/search")
+    public List<ResourceInfoResponseDTO> search(@Valid
+                                                @RequestParam(name = "query")
+                                                @NotBlank(message = "Parameter \"query\" must not be blank")
+                                                String query,
+                                                @AuthenticationPrincipal CustomUserDetails userDetails) {
+
+        return s3UserService.searchResource(userDetails.getId(), query);
     }
 }

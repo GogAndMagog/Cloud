@@ -15,6 +15,7 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -88,5 +89,22 @@ public class GlobalExceptionHandler {
     public MessageDTO handleResourceAlreadyExistsException(ResourceAlreadyExistsException e) {
 
         return new MessageDTO(e.getMessage());
+    }
+
+    @ExceptionHandler(HandlerMethodValidationException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public MessageDTO handleHandlerMethodValidationException(HandlerMethodValidationException e) {
+
+
+        StringBuilder message = new StringBuilder();
+
+        e.getParameterValidationResults()
+                .forEach(parameterValidationResult -> parameterValidationResult
+                        .getResolvableErrors()
+                        .forEach(messageSourceResolvable ->
+                                message.append(messageSourceResolvable.getDefaultMessage())
+                                        .append("\n")));
+
+        return new MessageDTO(message.toString());
     }
 }

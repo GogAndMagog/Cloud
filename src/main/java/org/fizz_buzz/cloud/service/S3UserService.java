@@ -1,5 +1,6 @@
 package org.fizz_buzz.cloud.service;
 
+import org.apache.tomcat.util.file.Matcher;
 import org.fizz_buzz.cloud.dto.ResourceType;
 import org.fizz_buzz.cloud.dto.response.ResourceInfoResponseDTO;
 import org.fizz_buzz.cloud.exception.ResourceAlreadyExistsException;
@@ -16,6 +17,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -139,7 +141,7 @@ public class S3UserService {
 
         Resource resource;
 
-        if (isDirectory(oldPath)){
+        if (isDirectory(oldPath)) {
 
             List<String> names = s3Repository.findAllNamesByPrefix(DEFAULT_BUCKET_NAME, oldTechnicalPath);
 
@@ -150,8 +152,7 @@ public class S3UserService {
                         name.replace(oldTechnicalPath, newTechnicalPath),
                         resource.dataStream());
             }
-        }
-        else {
+        } else {
 
             resource = s3Repository.getResourceByPath(DEFAULT_BUCKET_NAME, oldTechnicalPath);
             s3Repository.saveResource(DEFAULT_BUCKET_NAME, newTechnicalPath, resource.dataStream());
@@ -162,6 +163,18 @@ public class S3UserService {
         resource = s3Repository.getResourceByPath(DEFAULT_BUCKET_NAME, newTechnicalPath);
 
         return resourceToResourceInfoResponseDTO(userId, resource);
+    }
+
+    public List<ResourceInfoResponseDTO> searchResource(long userId, String query) {
+
+        String userDirectory = USER_DIRECTORY.formatted(userId);
+
+        return s3Repository.findAllNamesByPrefix(DEFAULT_BUCKET_NAME, USER_DIRECTORY.formatted(userId))
+                .stream()
+                .filter(name -> name.substring(userDirectory.length()).toLowerCase().contains(query.toLowerCase()))
+                .map(name -> s3Repository.getResourceByPath(DEFAULT_BUCKET_NAME, name))
+                .map(resource -> resourceToResourceInfoResponseDTO(userId, resource))
+                .collect(Collectors.toList());
     }
 
     private ResourceInfoResponseDTO resourceToResourceInfoResponseDTO(long userId, Resource resource) {

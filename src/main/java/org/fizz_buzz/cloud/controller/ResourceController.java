@@ -16,10 +16,12 @@ import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.InitBinder;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import java.nio.file.Path;
@@ -59,7 +61,9 @@ public class ResourceController {
     }
 
     @GetMapping(value = "/download", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
-    public ResponseEntity<StreamingResponseBody> downloadResource(@RequestParam(name = "path") String path,
+    public ResponseEntity<StreamingResponseBody> downloadResource(@Valid
+                                                                  @RequestParam(name = "path")
+                                                                  @NotBlank(message = "Parameter \"path\" must not be blank") String path,
                                                                   @AuthenticationPrincipal CustomUserDetails userDetails) {
 
         StreamingResponseBody streamingResponseBody = s3UserService.downloadResource(userDetails.getId(), path);
@@ -98,5 +102,14 @@ public class ResourceController {
                                                 @AuthenticationPrincipal CustomUserDetails userDetails) {
 
         return s3UserService.searchResource(userDetails.getId(), query);
+    }
+
+    @PostMapping(consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
+    @ResponseStatus(HttpStatus.CREATED)
+    public List<ResourceInfoResponseDTO> upload(@RequestParam(name = "path") String path,
+                                                @RequestParam(name = "file") MultipartFile[] files,
+                                                @AuthenticationPrincipal CustomUserDetails userDetails) {
+
+        return s3UserService.upload(userDetails.getId(), path, files);
     }
 }

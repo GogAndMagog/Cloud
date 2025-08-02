@@ -1,13 +1,15 @@
 package org.fizz_buzz.cloud.service;
 
-import org.apache.tomcat.util.file.Matcher;
 import org.fizz_buzz.cloud.dto.ResourceType;
 import org.fizz_buzz.cloud.dto.response.ResourceInfoResponseDTO;
+import org.fizz_buzz.cloud.exception.DirectoryNotExitsException;
 import org.fizz_buzz.cloud.exception.ResourceAlreadyExistsException;
 import org.fizz_buzz.cloud.exception.ResourceNotFound;
+import org.fizz_buzz.cloud.exception.S3RepositoryException;
 import org.fizz_buzz.cloud.model.Resource;
 import org.fizz_buzz.cloud.repository.S3Repository;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import java.io.IOException;
@@ -16,7 +18,9 @@ import java.io.OutputStream;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -175,6 +179,71 @@ public class S3UserService {
                 .map(name -> s3Repository.getResourceByPath(DEFAULT_BUCKET_NAME, name))
                 .map(resource -> resourceToResourceInfoResponseDTO(userId, resource))
                 .collect(Collectors.toList());
+    }
+
+    public List<ResourceInfoResponseDTO> upload(long userId, String uploadPath, MultipartFile[] files) {
+
+        String technicalPath = USER_DIRECTORY.formatted(userId).concat(uploadPath);
+        List<ResourceInfoResponseDTO> response = new ArrayList<>();
+
+        // uploading path validation
+        if (!uploadPath.isBlank() &&
+                (!isDirectory(uploadPath) || !s3Repository.isObjectExists(DEFAULT_BUCKET_NAME, technicalPath))) {
+            throw new DirectoryNotExitsException(uploadPath);
+        }
+
+        Set<String> directories = new HashSet<>();
+
+        // collecting all directories
+        for (MultipartFile file : files) {
+
+            if (file.getOriginalFilename() != null) {
+
+                // resource validation
+                if (s3Repository.isObjectExists(DEFAULT_BUCKET_NAME, technicalPath.concat(file.getOriginalFilename()))) {
+                    throw new ResourceAlreadyExistsException(file.getOriginalFilename());
+                }
+
+                for (int i = 0; i < file.getOriginalFilename().length(); i++) {
+
+                    if (file.getOriginalFilename().charAt(i) == '\\') {
+
+                        directories.add(technicalPath.concat(file.getOriginalFilename().substring(0, i)));
+                    }
+                }
+
+                directories.add(file.getOriginalFilename());
+            }
+        }
+
+        // crating nonexistent directories
+        for (String directory : directories) {
+
+            if (!s3Repository.isObjectExists(DEFAULT_BUCKET_NAME, directory)) {
+                s3Repository.createDirectory(DEFAULT_BUCKET_NAME, directory);
+            }
+        }
+
+        // file uploading
+        for (MultipartFile file : files) {
+
+            if (file.getOriginalFilename() != null) {
+
+                try (InputStream dataStream = file.getInputStream()) {
+
+                    s3Repository.saveResource(DEFAULT_BUCKET_NAME,
+                            technicalPath.concat(file.getOriginalFilename()),
+                            dataStream);
+                    response.add(resourceToResourceInfoResponseDTO(userId, s3Repository.getResourceByPath(DEFAULT_BUCKET_NAME,
+                            technicalPath.concat(file.getOriginalFilename()))));
+                } catch (Exception e) {
+
+                    throw new S3RepositoryException(e);
+                }
+            }
+        }
+
+        return response;
     }
 
     private ResourceInfoResponseDTO resourceToResourceInfoResponseDTO(long userId, Resource resource) {

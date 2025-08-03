@@ -296,19 +296,18 @@ public class S3UserService {
 
         ResourceType resourceType = isDirectory(resource.path()) ? ResourceType.DIRECTORY : ResourceType.FILE;
         String path;
-        String fileName;
+        String fileName = fullPath.getFileName().toString();;
 
         if (resourceType == ResourceType.DIRECTORY) {
 
-            fileName = "";
-            path = resource.path().substring(USER_DIRECTORY.formatted(userId).length());
+            // It is necessary to take into account '/' at the end of directory path
+            path = resource.path().substring(USER_DIRECTORY.formatted(userId).length(),
+                    resource.path().length() - fileName.length() - 1);
         } else {
 
-            fileName = fullPath.getFileName().toString();
             path = resource.path().substring(USER_DIRECTORY.formatted(userId).length(),
                     resource.path().length() - fileName.length());
         }
-
 
         return new ResourceInfoResponseDTO(path, fileName, resource.size(), resourceType);
     }

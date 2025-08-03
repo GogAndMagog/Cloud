@@ -16,7 +16,6 @@ import io.minio.messages.DeleteError;
 import io.minio.messages.DeleteObject;
 import io.minio.messages.Item;
 import lombok.RequiredArgsConstructor;
-import org.fizz_buzz.cloud.dto.response.ResourceInfoResponseDTO;
 import org.fizz_buzz.cloud.exception.EmptyPathException;
 import org.fizz_buzz.cloud.exception.ForbiddenSymbolException;
 import org.fizz_buzz.cloud.exception.ResourceNotFound;
@@ -96,7 +95,7 @@ public class MinioRepository implements S3Repository {
     }
 
     @Override
-    public List<String> findAllNamesByPrefix(String bucket, String prefix) {
+    public List<String> findAllNamesByPrefix(String bucket, String prefix, boolean recursive) {
 
         List<String> names = new ArrayList<>();
 
@@ -104,7 +103,7 @@ public class MinioRepository implements S3Repository {
                 .builder()
                 .bucket(bucket)
                 .prefix(prefix)
-                .recursive(true)
+                .recursive(recursive)
                 .build());
 
 
@@ -215,27 +214,7 @@ public class MinioRepository implements S3Repository {
     }
 
     @Override
-    public ResourceInfoResponseDTO move(String from, String to) {
-        return null;
-    }
-
-    @Override
-    public List<ResourceInfoResponseDTO> search(String path) {
-        return List.of();
-    }
-
-    @Override
-    public List<ResourceInfoResponseDTO> upload(String path) {
-        return List.of();
-    }
-
-    @Override
-    public List<ResourceInfoResponseDTO> directoryInfo(String path) {
-        return List.of();
-    }
-
-    @Override
-    public List<ResourceInfoResponseDTO> createDirectory(String bucketName, String path) {
+    public void createDirectory(String bucketName, String path) {
 
         List<String> directories = new ArrayList<>();
 
@@ -261,7 +240,6 @@ public class MinioRepository implements S3Repository {
             throw new RuntimeException(e);
         }
 
-        return List.of();
     }
 
     public boolean isObjectExists(String bucketName, String path) {

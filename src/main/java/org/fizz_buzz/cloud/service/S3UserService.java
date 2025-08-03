@@ -2,7 +2,7 @@ package org.fizz_buzz.cloud.service;
 
 import org.fizz_buzz.cloud.dto.ResourceType;
 import org.fizz_buzz.cloud.dto.response.ResourceInfoResponseDTO;
-import org.fizz_buzz.cloud.exception.DirectoryNotExitsException;
+import org.fizz_buzz.cloud.exception.DirectoryNotExistException;
 import org.fizz_buzz.cloud.exception.ResourceAlreadyExistsException;
 import org.fizz_buzz.cloud.exception.ResourceNotFound;
 import org.fizz_buzz.cloud.exception.S3RepositoryException;
@@ -11,10 +11,14 @@ import org.fizz_buzz.cloud.repository.S3Repository;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
+import org.springframework.web.servlet.resource.ResourceUrlProvider;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+
+import org.fizz_buzz.cloud.exception.NotDirectoryException;
+
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -78,7 +82,7 @@ public class S3UserService {
         String technicalPath = USER_DIRECTORY.formatted(userId).concat(resourcePath);
 
         List<Resource> resources = new ArrayList<>();
-        List<String> resourcesNames = s3Repository.findAllNamesByPrefix(DEFAULT_BUCKET_NAME, technicalPath);
+        List<String> resourcesNames = s3Repository.findAllNamesByPrefix(DEFAULT_BUCKET_NAME, technicalPath, true);
 
         for (String resourcesName : resourcesNames) {
             resources.add(s3Repository.getResourceByPath(DEFAULT_BUCKET_NAME, resourcesName));
@@ -147,7 +151,7 @@ public class S3UserService {
 
         if (isDirectory(oldPath)) {
 
-            List<String> names = s3Repository.findAllNamesByPrefix(DEFAULT_BUCKET_NAME, oldTechnicalPath);
+            List<String> names = s3Repository.findAllNamesByPrefix(DEFAULT_BUCKET_NAME, oldTechnicalPath, true);
 
             for (String name : names) {
 
@@ -173,7 +177,7 @@ public class S3UserService {
 
         String userDirectory = USER_DIRECTORY.formatted(userId);
 
-        return s3Repository.findAllNamesByPrefix(DEFAULT_BUCKET_NAME, USER_DIRECTORY.formatted(userId))
+        return s3Repository.findAllNamesByPrefix(DEFAULT_BUCKET_NAME, USER_DIRECTORY.formatted(userId), true)
                 .stream()
                 .filter(name -> name.substring(userDirectory.length()).toLowerCase().contains(query.toLowerCase()))
                 .map(name -> s3Repository.getResourceByPath(DEFAULT_BUCKET_NAME, name))
@@ -189,7 +193,7 @@ public class S3UserService {
         // uploading path validation
         if (!uploadPath.isBlank() &&
                 (!isDirectory(uploadPath) || !s3Repository.isObjectExists(DEFAULT_BUCKET_NAME, technicalPath))) {
-            throw new DirectoryNotExitsException(uploadPath);
+            throw new DirectoryNotExistException(uploadPath);
         }
 
         Set<String> directories = new HashSet<>();
@@ -246,6 +250,46 @@ public class S3UserService {
         return response;
     }
 
+    public List<ResourceInfoResponseDTO> getDirectory(long userId, String path) {
+
+        if (!isDirectory(path) && !path.isBlank()) {
+            throw new NotDirectoryException(path);
+        }
+
+        String technicalName = USER_DIRECTORY.formatted(userId).concat(path);
+
+        if (!s3Repository.isObjectExists(DEFAULT_BUCKET_NAME, technicalName)) {
+            throw new ResourceNotFound(path);
+        }
+
+        return s3Repository.findAllNamesByPrefix(DEFAULT_BUCKET_NAME, technicalName, false)
+                .stream()
+                // we need to cut user directory if it is root directory e.i. path is empty
+                // or cut searching directory
+                .filter(name -> !name.equals(USER_DIRECTORY.formatted(userId)) && (path.isBlank() || !name.endsWith(path)))
+                .map(name -> s3Repository.getResourceByPath(DEFAULT_BUCKET_NAME, name))
+                .map(resource -> resourceToResourceInfoResponseDTO(userId, resource))
+                .collect(Collectors.toList());
+    }
+
+    public ResourceInfoResponseDTO createDirectory(long userId, String path) {
+
+        if (!isDirectory(path)) {
+            throw new NotDirectoryException(path);
+        }
+
+        String technicalName = USER_DIRECTORY.formatted(userId).concat(path);
+
+        if (s3Repository.isObjectExists(DEFAULT_BUCKET_NAME, technicalName)) {
+            throw new ResourceAlreadyExistsException(path);
+        }
+
+        s3Repository.createDirectory(DEFAULT_BUCKET_NAME, technicalName);
+
+        return resourceToResourceInfoResponseDTO(userId,
+                s3Repository.getResourceByPath(DEFAULT_BUCKET_NAME, technicalName));
+    }
+
     private ResourceInfoResponseDTO resourceToResourceInfoResponseDTO(long userId, Resource resource) {
 
         Path fullPath = Paths.get(resource.path());
@@ -280,6 +324,6 @@ public class S3UserService {
 
     private boolean isDirectory(String path) {
 
-        return path.endsWith("/");
+        return path.endsWith("/") && path.length() > 1;
     }
 }

@@ -2,10 +2,10 @@ package org.fizz_buzz.cloud.exception;
 
 public class DirectoryNotExistException extends RuntimeException{
 
-    private static final String message = "Directory: %s does not exists";
+    private static final String MESSAGE = "\"%s\" is not a directory";
 
-    public DirectoryNotExistException(String directoryName) {
+    public DirectoryNotExistException(String path) {
 
-        super(message.formatted(directoryName));
+        super(MESSAGE.formatted(path));
     }
 }

@@ -3,6 +3,7 @@ package org.fizz_buzz.cloud.controller;
 import org.fizz_buzz.cloud.dto.MessageDTO;
 import org.fizz_buzz.cloud.exception.EmptyPathException;
 import org.fizz_buzz.cloud.exception.ForbiddenSymbolException;
+import org.fizz_buzz.cloud.exception.NotDirectoryException;
 import org.fizz_buzz.cloud.exception.ResourceAlreadyExistsException;
 import org.fizz_buzz.cloud.exception.ResourceNotFound;
 import org.fizz_buzz.cloud.exception.UserAlreadyExists;
@@ -106,5 +107,12 @@ public class GlobalExceptionHandler {
                                         .append("\n")));
 
         return new MessageDTO(message.toString());
+    }
+
+    @ExceptionHandler(NotDirectoryException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public MessageDTO handleNotDirectoryException(NotDirectoryException e) {
+
+        return new MessageDTO(e.getMessage());
     }
 }

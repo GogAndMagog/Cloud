@@ -24,6 +24,10 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
@@ -64,7 +68,7 @@ public class ResourceController {
     public ResponseEntity<StreamingResponseBody> downloadResource(@Valid
                                                                   @RequestParam(name = "path")
                                                                   @NotBlank(message = "Parameter \"path\" must not be blank") String path,
-                                                                  @AuthenticationPrincipal CustomUserDetails userDetails) {
+                                                                  @AuthenticationPrincipal CustomUserDetails userDetails) throws UnsupportedEncodingException {
 
         StreamingResponseBody streamingResponseBody = s3UserService.downloadResource(userDetails.getId(), path);
 
@@ -77,8 +81,11 @@ public class ResourceController {
             fileName = entirePath.getFileName().toString();
         }
 
+        // needed to support other languages, not only English
+        String encodedFileName =  URLEncoder.encode(fileName, StandardCharsets.UTF_8).replace("+", "%20");
+
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"%s\"".formatted(fileName))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''%s".formatted(encodedFileName))
                 .body(streamingResponseBody);
     }
 

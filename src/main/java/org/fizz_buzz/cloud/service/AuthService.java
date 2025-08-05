@@ -28,7 +28,7 @@ public class AuthService {
     private final SecurityContextRepository securityContextRepository;
 
 
-    public UserResponseDTO signUp(UserRequestDTO request) {
+    public User signUp(UserRequestDTO request) {
 
         User savedUser;
 
@@ -45,7 +45,7 @@ public class AuthService {
             }
         }
 
-        return new UserResponseDTO(savedUser.getName());
+        return savedUser;
     }
 
     public UserResponseDTO signIn(UserRequestDTO request,

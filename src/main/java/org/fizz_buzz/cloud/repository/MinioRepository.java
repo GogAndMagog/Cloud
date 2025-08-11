@@ -224,6 +224,8 @@ public class MinioRepository implements S3Repository {
             }
         }
 
+        directories.add(path);
+
         try {
 
             for (String directory : directories) {

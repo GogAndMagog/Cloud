@@ -214,13 +214,23 @@ public class S3UserService {
 
                 for (int i = 0; i < file.getOriginalFilename().length(); i++) {
 
-                    if (file.getOriginalFilename().charAt(i) == '\\') {
+                    if (file.getOriginalFilename().charAt(i) == '/') {
 
-                        directories.add(technicalPath.concat(file.getOriginalFilename().substring(0, i)));
+                        String directory = technicalPath.concat(file.getOriginalFilename().substring(0, i + 1));
+
+                        // do not allow upload directories that already exists
+                        if (s3Repository.isObjectExists(defaultBucketName, directory)) {
+
+                            throw new ResourceAlreadyExistsException(file.getOriginalFilename().substring(0, i + 1));
+                        } else {
+                            directories.add(directory);
+                        }
                     }
                 }
 
-                directories.add(file.getOriginalFilename());
+                if (isDirectory(file.getOriginalFilename())) {
+                    directories.add(file.getOriginalFilename());
+                }
             }
         }
 
@@ -300,16 +310,17 @@ public class S3UserService {
 
         ResourceType resourceType = isDirectory(resource.path()) ? ResourceType.DIRECTORY : ResourceType.FILE;
         String path;
-        String fileName = fullPath.getFileName().toString();
-        ;
+        String fileName;
 
         if (resourceType == ResourceType.DIRECTORY) {
 
+            fileName = fullPath.getFileName().toString().concat("/");
             // It is necessary to take into account '/' at the end of directory path
             path = resource.path().substring(USER_DIRECTORY.formatted(userId).length(),
-                    resource.path().length() - fileName.length() - 1);
+                    resource.path().length() - fileName.length());
         } else {
 
+            fileName = fullPath.getFileName().toString();
             path = resource.path().substring(USER_DIRECTORY.formatted(userId).length(),
                     resource.path().length() - fileName.length());
         }

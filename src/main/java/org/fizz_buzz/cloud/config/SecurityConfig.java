@@ -15,6 +15,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextRepository;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+
+import java.util.List;
 
 @Configuration
 public class SecurityConfig {
@@ -28,12 +32,31 @@ public class SecurityConfig {
         http.authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .anyRequest().authenticated())
+                // Включаем CORS и разрешаем все источники, методы и заголовки
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)          
                 .formLogin(form -> form.disable())
                 .logout(logout -> logout.disable())
                 .exceptionHandling(configurer -> configurer.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
         ;
         return http.build();
+    }
+
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        return request -> {
+            CorsConfiguration config = new CorsConfiguration();
+            // Разрешаем все источники, или укажите конкретные
+            config.setAllowedOriginPatterns(List.of("*")); // Используйте setAllowedOriginPatterns для поддержки wildcard
+            // Разрешаем все методы
+            config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+            // Разрешаем все заголовки
+            config.setAllowedHeaders(List.of("*"));
+            // Разрешить отправку с credentials, если нужно
+            config.setAllowCredentials(true);
+            return config;
+        };
     }
 
     @Bean

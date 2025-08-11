@@ -114,7 +114,7 @@ public class ResourceController {
     @PostMapping(consumes = { MediaType.MULTIPART_FORM_DATA_VALUE })
     @ResponseStatus(HttpStatus.CREATED)
     public List<ResourceInfoResponseDTO> upload(@RequestParam(name = "path") String path,
-                                                @RequestParam(name = "file") MultipartFile[] files,
+                                                @RequestParam(name = "object") MultipartFile[] files,
                                                 @AuthenticationPrincipal CustomUserDetails userDetails) {
 
         return s3UserService.upload(userDetails.getId(), path, files);

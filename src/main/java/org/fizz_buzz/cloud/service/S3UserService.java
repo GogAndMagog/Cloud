@@ -214,13 +214,23 @@ public class S3UserService {
 
                 for (int i = 0; i < file.getOriginalFilename().length(); i++) {
 
-                    if (file.getOriginalFilename().charAt(i) == '\\') {
+                    if (file.getOriginalFilename().charAt(i) == '/') {
 
-                        directories.add(technicalPath.concat(file.getOriginalFilename().substring(0, i)));
+                        String directory = technicalPath.concat(file.getOriginalFilename().substring(0, i + 1));
+
+                        // do not allow upload directories that already exists
+                        if (s3Repository.isObjectExists(defaultBucketName, directory)) {
+
+                            throw new ResourceAlreadyExistsException(file.getOriginalFilename().substring(0, i + 1));
+                        } else {
+                            directories.add(directory);
+                        }
                     }
                 }
 
-                directories.add(file.getOriginalFilename());
+                if (isDirectory(file.getOriginalFilename())) {
+                    directories.add(file.getOriginalFilename());
+                }
             }
         }
 
@@ -270,7 +280,7 @@ public class S3UserService {
                 .stream()
                 // we need to cut user directory if it is root directory e.i. path is empty
                 // or cut searching directory
-                .filter(name -> !name.equals(USER_DIRECTORY.formatted(userId)) && (path.isBlank() || !name.endsWith(path)))
+                .filter(name -> !name.equals(USER_DIRECTORY.formatted(userId)) && (path.isBlank() || !name.equals(technicalName)))
                 .map(name -> s3Repository.getResourceByPath(defaultBucketName, name))
                 .map(resource -> resourceToResourceInfoResponseDTO(userId, resource))
                 .collect(Collectors.toList());
@@ -301,7 +311,6 @@ public class S3UserService {
         ResourceType resourceType = isDirectory(resource.path()) ? ResourceType.DIRECTORY : ResourceType.FILE;
         String path;
         String fileName = fullPath.getFileName().toString();
-        ;
 
         if (resourceType == ResourceType.DIRECTORY) {
 
@@ -315,15 +324,6 @@ public class S3UserService {
         }
 
         return new ResourceInfoResponseDTO(path, fileName, resource.size(), resourceType);
-    }
-
-    private void writeStream(OutputStream os, InputStream is) throws IOException {
-
-        byte[] buffer = new byte[1024];
-        int bytesRead;
-        while ((bytesRead = is.read(buffer)) != -1) {
-            os.write(buffer, 0, bytesRead);
-        }
     }
 
     private boolean isDirectory(String path) {

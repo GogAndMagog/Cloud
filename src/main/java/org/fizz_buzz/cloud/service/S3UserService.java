@@ -280,7 +280,7 @@ public class S3UserService {
                 .stream()
                 // we need to cut user directory if it is root directory e.i. path is empty
                 // or cut searching directory
-                .filter(name -> !name.equals(USER_DIRECTORY.formatted(userId)) && (path.isBlank() || !name.endsWith(path)))
+                .filter(name -> !name.equals(USER_DIRECTORY.formatted(userId)) && (path.isBlank() || !name.equals(technicalName)))
                 .map(name -> s3Repository.getResourceByPath(defaultBucketName, name))
                 .map(resource -> resourceToResourceInfoResponseDTO(userId, resource))
                 .collect(Collectors.toList());
@@ -310,31 +310,20 @@ public class S3UserService {
 
         ResourceType resourceType = isDirectory(resource.path()) ? ResourceType.DIRECTORY : ResourceType.FILE;
         String path;
-        String fileName;
+        String fileName = fullPath.getFileName().toString();
 
         if (resourceType == ResourceType.DIRECTORY) {
 
-            fileName = fullPath.getFileName().toString().concat("/");
             // It is necessary to take into account '/' at the end of directory path
             path = resource.path().substring(USER_DIRECTORY.formatted(userId).length(),
-                    resource.path().length() - fileName.length());
+                    resource.path().length() - fileName.length() - 1);
         } else {
 
-            fileName = fullPath.getFileName().toString();
             path = resource.path().substring(USER_DIRECTORY.formatted(userId).length(),
                     resource.path().length() - fileName.length());
         }
 
         return new ResourceInfoResponseDTO(path, fileName, resource.size(), resourceType);
-    }
-
-    private void writeStream(OutputStream os, InputStream is) throws IOException {
-
-        byte[] buffer = new byte[1024];
-        int bytesRead;
-        while ((bytesRead = is.read(buffer)) != -1) {
-            os.write(buffer, 0, bytesRead);
-        }
     }
 
     private boolean isDirectory(String path) {

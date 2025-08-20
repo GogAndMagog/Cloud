@@ -34,18 +34,22 @@ dependencies {
     implementation 'io.minio:minio:8.5.17'
     implementation "org.flywaydb:flyway-core:11.8.0"
     implementation 'org.flywaydb:flyway-database-postgresql:11.8.0'
+    implementation("com.jayway.jsonpath:json-path:2.9.0")
     compileOnly 'org.projectlombok:lombok'
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
     runtimeOnly 'org.postgresql:postgresql'
     annotationProcessor 'org.projectlombok:lombok'
+    testImplementation 'org.springframework.boot:spring-boot-testcontainers'
     testImplementation 'org.springframework.boot:spring-boot-test'
     testImplementation 'org.springframework.security:spring-security-test'
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     testImplementation("org.testcontainers:testcontainers:1.20.2")
     testImplementation("org.testcontainers:junit-jupiter")
     testImplementation("org.testcontainers:minio:1.21.2")
+    testImplementation("org.testcontainers:postgresql:1.21.3")
+    testImplementation("com.redis.testcontainers:testcontainers-redis:1.6.4")
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
-//    testImplementation platform('org.junit:junit-bom:5.11.2');
+
 //    Copy
 
     testImplementation 'org.junit.platform:junit-platform-engine:1.13.0-M2'

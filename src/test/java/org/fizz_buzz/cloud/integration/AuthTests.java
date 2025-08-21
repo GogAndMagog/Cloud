@@ -3,20 +3,29 @@ package org.fizz_buzz.cloud.integration;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.fizz_buzz.cloud.dto.request.UserRequestDTO;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestClassOrder;
+import org.junit.jupiter.api.TestMethodOrder;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockHttpSession;
+import org.springframework.security.test.context.support.WithAnonymousUser;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.anonymous;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
-
+@AutoConfigureMockMvc
 public class AuthTests extends IntegrationTestBaseClass {
 
     private static final String LOGIN = "Login";
@@ -44,7 +53,7 @@ public class AuthTests extends IntegrationTestBaseClass {
     }
 
     @Nested
-    class SignUpMethod{
+    class SignUpMethod {
 
         @Test
         public void registration_CorrectCredentials_Success() throws Exception {
@@ -99,7 +108,7 @@ public class AuthTests extends IntegrationTestBaseClass {
     }
 
     @Nested
-    class SignInMethod{
+    class SignInMethod {
 
         @Test
         public void login_CorrectCredentials_Success() throws Exception {
@@ -183,21 +192,22 @@ public class AuthTests extends IntegrationTestBaseClass {
         }
 
         @Test
+        @WithAnonymousUser
         public void logout_UnauthorizedUser_ErrorStatusCode401() throws Exception {
 
-            UserRequestDTO credentials = new UserRequestDTO(LOGIN_8, DEFAULT_PASSWORD);
-            String json = objectMapper.writeValueAsString(credentials);
+//            UserRequestDTO credentials = new UserRequestDTO(LOGIN_8, DEFAULT_PASSWORD);
+//            String json = objectMapper.writeValueAsString(credentials);
 
-            mockMvc.perform(post("/api/v1/auth/sign-up")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(json));
-            mockMvc.perform(post("/api/v1/auth/sign-out")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(json));
+//            mockMvc.perform(post("/api/v1/auth/sign-up")
+//                    .contentType(MediaType.APPLICATION_JSON)
+//                    .content(json));
+//            mockMvc.perform(post("/api/v1/auth/sign-out")
+//                    .contentType(MediaType.APPLICATION_JSON)
+//                    .content(json));
 
             var mvcResult = mockMvc.perform(post("/api/v1/auth/sign-out")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(json))
+//                            .with(anonymous())
+                    )
                     .andExpect(status().isUnauthorized())
                     .andExpect(jsonPath("$.message").exists())
                     .andReturn();

@@ -1,83 +1,37 @@
 package org.fizz_buzz.cloud.integration;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.github.dockerjava.api.model.ExposedPort;
-import com.github.dockerjava.api.model.PortBinding;
-import com.github.dockerjava.api.model.Ports;
-import com.redis.testcontainers.RedisContainer;
-import io.swagger.v3.oas.models.media.JsonSchema;
-import org.fizz_buzz.cloud.config.S3StorageConfig;
-import org.fizz_buzz.cloud.config.SessionsConfig;
 import org.fizz_buzz.cloud.dto.request.UserRequestDTO;
-import org.fizz_buzz.cloud.dto.response.UserResponseDTO;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
-import org.springframework.context.annotation.PropertySource;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.MvcResult;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-import org.springframework.test.web.servlet.result.MockMvcResultHandlers;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
-import org.testcontainers.containers.MinIOContainer;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
-@SpringBootTest
-@Testcontainers
-public class AuthTests {
 
-    private static final String DB_NAME = "postgres";
-    private static final String DB_USER = "admin";
-    private static final String DB_PASS = "password";
+public class AuthTests extends IntegrationTestBaseClass {
 
-    private static final String S3_USER = "minioadmin";
-    private static final String S3_PASS = "minioadmin";
-
-    private static final String DEFAULT_LOGIN = "Login5";
+    private static final String LOGIN = "Login";
+    private static final String LOGIN_2 = "Login2";
+    private static final String LOGIN_3 = "Log";
+    private static final String LOGIN_4 = "Login4";
+    private static final String LOGIN_5 = "Login5";
+    private static final String LOGIN_6 = "Login6";
+    private static final String LOGIN_7 = "Login7";
+    private static final String LOGIN_8 = "Login8";
     private static final String DEFAULT_PASSWORD = "Login123";
+    private static final String WRONG_PASSWORD = "asdsadsd";
 
-    @Container
-    @ServiceConnection
-    private static final PostgreSQLContainer<?> postgresContainer =
-            new PostgreSQLContainer<>("postgres:15")
-                    .withDatabaseName(DB_NAME)
-                    .withUsername(DB_USER)
-                    .withPassword(DB_PASS);
-
-    @Container
-//    @ServiceConnection
-    private static final MinIOContainer minioContainer = new MinIOContainer("minio/minio:latest")
-            .withPassword(S3_PASS)
-            .withUserName(S3_USER)
-            .withExposedPorts(9000)
-            .withCreateContainerCmdModifier(createContainerCmd ->
-                    createContainerCmd
-                            .getHostConfig()
-                            .withPortBindings(new PortBinding(Ports.Binding.bindPort(9000)
-                                    , new ExposedPort(9000))));
-
-    @Container
-    @ServiceConnection
-    private static final RedisContainer redisContainer = new RedisContainer("latest")
-            .withEnv("REDIS_PASSWORD", "1234")
-            .withExposedPorts(6379);
-
-    @Autowired private ObjectMapper objectMapper;
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @Autowired
     private WebApplicationContext webApplicationContext;
@@ -89,19 +43,166 @@ public class AuthTests {
         this.mockMvc = MockMvcBuilders.webAppContextSetup(this.webApplicationContext).build();
     }
 
-    @Test
-    public void registration_CorrectCredentials_Success() throws Exception {
+    @Nested
+    class SignUpMethod{
 
-        UserRequestDTO credentials = new UserRequestDTO(DEFAULT_LOGIN, DEFAULT_PASSWORD);
-        String json = objectMapper.writeValueAsString(credentials);
+        @Test
+        public void registration_CorrectCredentials_Success() throws Exception {
 
-        var mvcResult = this.mockMvc.perform(post("/api/v1/auth/sign-up")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(json))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.username").value(DEFAULT_LOGIN))
-                .andReturn();
+            UserRequestDTO credentials = new UserRequestDTO(LOGIN, DEFAULT_PASSWORD);
+            String json = objectMapper.writeValueAsString(credentials);
 
-        assertEquals(MediaType.APPLICATION_JSON_VALUE, mvcResult.getResponse().getContentType());
+            var mvcResult = mockMvc.perform(post("/api/v1/auth/sign-up")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(json))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.username").value(LOGIN))
+                    .andReturn();
+
+            assertEquals(MediaType.APPLICATION_JSON_VALUE, mvcResult.getResponse().getContentType());
+        }
+
+        @Test
+        public void registration_RegisteredUser_ErrorStatusCode409() throws Exception {
+
+            UserRequestDTO credentials = new UserRequestDTO(LOGIN_2, DEFAULT_PASSWORD);
+            String json = objectMapper.writeValueAsString(credentials);
+
+            mockMvc.perform(post("/api/v1/auth/sign-up")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(json));
+            var mvcResult = mockMvc.perform(post("/api/v1/auth/sign-up")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(json))
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.message").exists())
+                    .andReturn();
+
+            assertEquals(MediaType.APPLICATION_JSON_VALUE, mvcResult.getResponse().getContentType());
+        }
+
+        @Test
+        public void registration_ShortUsername_ErrorStatusCode400() throws Exception {
+
+            UserRequestDTO credentials = new UserRequestDTO(LOGIN_3, DEFAULT_PASSWORD);
+            String json = objectMapper.writeValueAsString(credentials);
+
+            var mvcResult = mockMvc.perform(post("/api/v1/auth/sign-up")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(json))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.message").exists())
+                    .andReturn();
+
+            assertEquals(MediaType.APPLICATION_JSON_VALUE, mvcResult.getResponse().getContentType());
+        }
+    }
+
+    @Nested
+    class SignInMethod{
+
+        @Test
+        public void login_CorrectCredentials_Success() throws Exception {
+
+            UserRequestDTO credentials = new UserRequestDTO(LOGIN_4, DEFAULT_PASSWORD);
+            String json = objectMapper.writeValueAsString(credentials);
+
+            mockMvc.perform(post("/api/v1/auth/sign-up")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(json));
+
+            var mvcResult = mockMvc.perform(post("/api/v1/auth/sign-in")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(json))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.username").value(LOGIN_4))
+                    .andReturn();
+
+            assertEquals(MediaType.APPLICATION_JSON_VALUE, mvcResult.getResponse().getContentType());
+        }
+
+        @Test
+        public void login_NonRegisteredUser_ErrorStatusCode401() throws Exception {
+
+            UserRequestDTO credentials = new UserRequestDTO(LOGIN_5, DEFAULT_PASSWORD);
+            String json = objectMapper.writeValueAsString(credentials);
+
+            var mvcResult = mockMvc.perform(post("/api/v1/auth/sign-in")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(json))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.message").exists())
+                    .andReturn();
+
+            assertEquals(MediaType.APPLICATION_JSON_VALUE, mvcResult.getResponse().getContentType());
+        }
+
+        @Test
+        public void login_WrongPassword_ErrorStatusCode401() throws Exception {
+
+            UserRequestDTO credentials = new UserRequestDTO(LOGIN_6, DEFAULT_PASSWORD);
+            String json = objectMapper.writeValueAsString(credentials);
+
+            mockMvc.perform(post("/api/v1/auth/sign-up")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(json));
+
+            UserRequestDTO credentialsWithWrongPassword = new UserRequestDTO(LOGIN_6, WRONG_PASSWORD);
+            json = objectMapper.writeValueAsString(credentialsWithWrongPassword);
+
+            var mvcResult = mockMvc.perform(post("/api/v1/auth/sign-in")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(json))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.message").exists())
+                    .andReturn();
+
+            assertEquals(MediaType.APPLICATION_JSON_VALUE, mvcResult.getResponse().getContentType());
+        }
+    }
+
+    @Nested
+    class SignOutMethod {
+
+        @Test
+        public void logout_CorrectCredentials_Success() throws Exception {
+
+            UserRequestDTO credentials = new UserRequestDTO(LOGIN_7, DEFAULT_PASSWORD);
+            String json = objectMapper.writeValueAsString(credentials);
+
+            mockMvc.perform(post("/api/v1/auth/sign-up")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(json));
+
+            mockMvc.perform(post("/api/v1/auth/sign-out")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(json))
+                    .andExpect(status().isNoContent())
+                    .andExpect(content().string(""))
+                    .andReturn();
+        }
+
+        @Test
+        public void logout_UnauthorizedUser_ErrorStatusCode401() throws Exception {
+
+            UserRequestDTO credentials = new UserRequestDTO(LOGIN_8, DEFAULT_PASSWORD);
+            String json = objectMapper.writeValueAsString(credentials);
+
+            mockMvc.perform(post("/api/v1/auth/sign-up")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(json));
+            mockMvc.perform(post("/api/v1/auth/sign-out")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(json));
+
+            var mvcResult = mockMvc.perform(post("/api/v1/auth/sign-out")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(json))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.message").exists())
+                    .andReturn();
+
+            assertEquals(MediaType.APPLICATION_JSON_VALUE, mvcResult.getResponse().getContentType());
+        }
     }
 }

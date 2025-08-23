@@ -1,4 +1,4 @@
-package org.fizz_buzz.cloud.repository;
+package org.fizz_buzz.cloud.integration;
 
 import com.github.dockerjava.api.model.ExposedPort;
 import com.github.dockerjava.api.model.PortBinding;
@@ -6,6 +6,8 @@ import com.github.dockerjava.api.model.Ports;
 import io.minio.MinioClient;
 import org.fizz_buzz.cloud.dto.ResourceType;
 import org.fizz_buzz.cloud.dto.response.ResourceInfoResponseDTO;
+import org.fizz_buzz.cloud.repository.MinioRepository;
+import org.fizz_buzz.cloud.repository.S3Repository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,14 +17,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.params.Parameter;
 import org.junit.jupiter.params.ParameterizedClass;
-import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
-import org.junit.jupiter.params.BeforeParameterizedClassInvocation;
-import org.junit.jupiter.params.AfterParameterizedClassInvocation;
 import org.junit.jupiter.params.support.ParameterDeclarations;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.testcontainers.containers.MinIOContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -33,7 +31,7 @@ import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.*;
 
 @Testcontainers
-@Disabled
+@Disabled("First attempt to use Testcontainers. Disabled cause of my laziness.")
 public class S3RepositoryTest {
 
     private static final String S3_USER = "minioadmin";

@@ -29,6 +29,6 @@ public record Resource(String path, InputStream dataStream, long size) {
 
         Objects.requireNonNull(dataStream);
 
-        cleaner.register(this, () -> wrap(this.dataStream()::close));
+        cleaner.register(this, () -> wrap(dataStream::close));
     }
 }

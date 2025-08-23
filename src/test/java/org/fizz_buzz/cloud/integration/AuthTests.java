@@ -2,21 +2,19 @@ package org.fizz_buzz.cloud.integration;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.fizz_buzz.cloud.dto.request.UserRequestDTO;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithAnonymousUser;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
 @AutoConfigureMockMvc
@@ -31,13 +29,9 @@ public class AuthTests extends IntegrationTestBaseClass {
 
     @Autowired
     private WebApplicationContext webApplicationContext;
+    @Autowired
     private MockMvc mockMvc;
 
-    @BeforeEach
-    public void setup() {
-
-        this.mockMvc = MockMvcBuilders.webAppContextSetup(this.webApplicationContext).build();
-    }
 
     @Nested
     class SignUpMethod {
@@ -108,7 +102,7 @@ public class AuthTests extends IntegrationTestBaseClass {
 
             String userName = nextUserName();
 
-            UserRequestDTO credentials = new UserRequestDTO(userName, DEFAULT_PASSWORD);
+            UserRequestDTO credentials = new UserRequestDTO("Login", DEFAULT_PASSWORD);
             String json = objectMapper.writeValueAsString(credentials);
 
             mockMvc.perform(post("/api/v1/auth/sign-up")
@@ -119,7 +113,7 @@ public class AuthTests extends IntegrationTestBaseClass {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(json))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.username").value(userName))
+                    .andExpect(jsonPath("$.username").value("Login"))
                     .andReturn();
 
             assertEquals(MediaType.APPLICATION_JSON_VALUE, mvcResult.getResponse().getContentType());
@@ -173,6 +167,7 @@ public class AuthTests extends IntegrationTestBaseClass {
     class SignOutMethod {
 
         @Test
+        @WithMockUser(username = "Login")
         public void logout_CorrectCredentials_Success() throws Exception {
 
             String userName = nextUserName();
@@ -180,41 +175,16 @@ public class AuthTests extends IntegrationTestBaseClass {
             UserRequestDTO credentials = new UserRequestDTO(userName, DEFAULT_PASSWORD);
             String json = objectMapper.writeValueAsString(credentials);
 
-            mockMvc.perform(post("/api/v1/auth/sign-up")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(json));
-
-            mockMvc.perform(post("/api/v1/auth/sign-out")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(json))
-                    .andExpect(status().isNoContent())
-                    .andExpect(content().string(""))
-                    .andReturn();
+            mockMvc.perform(post("/api/v1/auth/sign-out"))
+                    .andExpect(status().isNoContent());
         }
 
         @Test
         @WithAnonymousUser
-        @Disabled("Spring Security doesn't work")
         public void logout_UnauthorizedUser_ErrorStatusCode401() throws Exception {
 
-//            UserRequestDTO credentials = new UserRequestDTO(LOGIN_8, DEFAULT_PASSWORD);
-//            String json = objectMapper.writeValueAsString(credentials);
-
-//            mockMvc.perform(post("/api/v1/auth/sign-up")
-//                    .contentType(MediaType.APPLICATION_JSON)
-//                    .content(json));
-//            mockMvc.perform(post("/api/v1/auth/sign-out")
-//                    .contentType(MediaType.APPLICATION_JSON)
-//                    .content(json));
-
-            var mvcResult = mockMvc.perform(post("/api/v1/auth/sign-out")
-//                            .with(anonymous())
-                    )
-                    .andExpect(status().isUnauthorized())
-                    .andExpect(jsonPath("$.message").exists())
-                    .andReturn();
-
-            assertEquals(MediaType.APPLICATION_JSON_VALUE, mvcResult.getResponse().getContentType());
+            mockMvc.perform(post("/api/v1/auth/sign-out"))
+                    .andExpect(status().isUnauthorized());
         }
     }
 

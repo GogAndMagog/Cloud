@@ -84,9 +84,11 @@ public class AuthController {
             }
     )
     @PostMapping(value = "/sign-up")
-    public ResponseEntity<UserResponseDTO> signUp(@Valid @RequestBody UserRequestDTO request) {
+    public ResponseEntity<UserResponseDTO> signUp(@Valid @RequestBody UserRequestDTO request,
+                                                  HttpServletRequest httpServletRequest,
+                                                  HttpServletResponse httpServletResponse) {
 
-        var user = authService.signUp(request);
+        var user = authService.signUp(request, httpServletRequest, httpServletResponse);
         s3UserService.createUserDirectory(user.getId());
 
         return new ResponseEntity<>(new UserResponseDTO(user.getName()), HttpStatus.CREATED);

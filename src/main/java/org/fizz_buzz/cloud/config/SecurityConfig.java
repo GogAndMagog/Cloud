@@ -30,7 +30,9 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
         http.authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/api/v1/auth/sign-up", "/api/v1/auth/sign-in").permitAll()
+                        .requestMatchers("/api/v1/auth/sign-up",
+                                "/api/v1/auth/sign-in",
+                                "/actuator/health").permitAll()
                         .anyRequest().authenticated())
                 // Включаем CORS и разрешаем все источники, методы и заголовки
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))

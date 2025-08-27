@@ -49,13 +49,9 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         return request -> {
             CorsConfiguration config = new CorsConfiguration();
-            // Разрешаем все источники, или укажите конкретные
-            config.setAllowedOriginPatterns(List.of("*")); // Используйте setAllowedOriginPatterns для поддержки wildcard
-            // Разрешаем все методы
+            config.setAllowedOriginPatterns(List.of("*"));
             config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-            // Разрешаем все заголовки
             config.setAllowedHeaders(List.of("*"));
-            // Разрешить отправку с credentials, если нужно
             config.setAllowCredentials(true);
             return config;
         };

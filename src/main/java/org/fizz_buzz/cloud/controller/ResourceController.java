@@ -11,9 +11,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import org.fizz_buzz.cloud.dto.MessageDTO;
-import org.fizz_buzz.cloud.dto.request.UserRequestDTO;
 import org.fizz_buzz.cloud.dto.response.ResourceInfoResponseDTO;
-import org.fizz_buzz.cloud.dto.response.UserResponseDTO;
 import org.fizz_buzz.cloud.security.CustomUserDetails;
 import org.fizz_buzz.cloud.service.S3UserService;
 import org.springframework.beans.propertyeditors.StringTrimmerEditor;
@@ -36,7 +34,6 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;

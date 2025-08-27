@@ -28,12 +28,21 @@ public class AuthService {
     private final SecurityContextRepository securityContextRepository;
 
 
-    public UserResponseDTO signUp(UserRequestDTO request) {
+    public User signUp(UserRequestDTO request,
+                       HttpServletRequest httpServletRequest,
+                       HttpServletResponse httpServletResponse) {
 
         User savedUser;
 
         try {
             savedUser = userRepository.save(new User(request.username(), passwordEncoder.encode(request.password())));
+            Authentication authenticationRequest =
+                    UsernamePasswordAuthenticationToken.unauthenticated(request.username(), request.password());
+            Authentication authenticationResponse =
+                    this.authenticationManager.authenticate(authenticationRequest);
+            var securityContext = new SecurityContextImpl(authenticationResponse);
+
+            securityContextRepository.saveContext(securityContext, httpServletRequest, httpServletResponse);
         } catch (DataIntegrityViolationException e) {
 
             if (e.getCause() instanceof ConstraintViolationException constraintViolationException
@@ -45,7 +54,7 @@ public class AuthService {
             }
         }
 
-        return new UserResponseDTO(savedUser.getName());
+        return savedUser;
     }
 
     public UserResponseDTO signIn(UserRequestDTO request,

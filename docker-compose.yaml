@@ -1,5 +1,3 @@
-version: "2"
-
 services:
 
   postgres:
@@ -8,8 +6,13 @@ services:
       - POSTGRES_USER=$DB_USER
       - POSTGRES_PASSWORD=$DB_PASS
     ports:
-      - "5433:5432"
+      - "5434:5432"
     container_name: postgres
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", $DB_USER]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: redis:latest
@@ -17,3 +20,47 @@ services:
       - "6379:6379"
     container_name: redis
     command: --requirepass $REDIS_PASS
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    ports:
+      - "9000:9000"
+    environment:
+      - MINIO_ROOT_USER=$MINIO_USER
+      - MINIO_ROOT_PASSWORD=$MINIO_PASS
+    command: server /data
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:9000/minio/health/live" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    image: analnik/cloud-app:cloud-backend
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  frontend:
+    image: analnik/cloud-app:cloud-frontend
+    ports:
+      - "8081:80"
+    depends_on:
+      backend:
+        condition: service_healthy

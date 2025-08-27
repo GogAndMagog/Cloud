@@ -1,4 +1,4 @@
-package org.fizz_buzz.cloud.entrypoint;
+package org.fizz_buzz.cloud.security.entrypoint;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

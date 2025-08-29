@@ -11,11 +11,9 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import org.fizz_buzz.cloud.dto.MessageDTO;
-import org.fizz_buzz.cloud.dto.request.UserRequestDTO;
 import org.fizz_buzz.cloud.dto.response.ResourceInfoResponseDTO;
-import org.fizz_buzz.cloud.dto.response.UserResponseDTO;
 import org.fizz_buzz.cloud.security.CustomUserDetails;
-import org.fizz_buzz.cloud.service.S3UserService;
+import org.fizz_buzz.cloud.service.StorageService;
 import org.springframework.beans.propertyeditors.StringTrimmerEditor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -29,6 +27,7 @@ import org.springframework.web.bind.annotation.InitBinder;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
@@ -36,7 +35,6 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -51,7 +49,7 @@ import java.util.List;
 @RequestMapping("/api/v1/resource")
 public class ResourceController {
 
-    private final S3UserService s3UserService;
+    private final StorageService storageService;
 
 
     @InitBinder
@@ -115,7 +113,7 @@ public class ResourceController {
                                                @NotBlank(message = "Parameter \"path\" must not be blank") String path,
                                                @AuthenticationPrincipal CustomUserDetails userDetails) {
 
-        return s3UserService.getResource(userDetails.getId(), path);
+        return storageService.getResource(userDetails.getId(), path);
     }
 
 
@@ -172,7 +170,7 @@ public class ResourceController {
                                @NotBlank(message = "Parameter \"path\" must not be blank") String path,
                                @AuthenticationPrincipal CustomUserDetails userDetails) {
 
-        s3UserService.deleteResource(userDetails.getId(), path);
+        storageService.deleteResource(userDetails.getId(), path);
     }
 
 
@@ -231,7 +229,7 @@ public class ResourceController {
                                                                   @NotBlank(message = "Parameter \"path\" must not be blank") String path,
                                                                   @AuthenticationPrincipal CustomUserDetails userDetails) throws UnsupportedEncodingException {
 
-        StreamingResponseBody streamingResponseBody = s3UserService.downloadResource(userDetails.getId(), path);
+        StreamingResponseBody streamingResponseBody = storageService.downloadResource(userDetails.getId(), path);
 
         Path entirePath = Paths.get(path);
         String fileName;
@@ -325,7 +323,7 @@ public class ResourceController {
                                         @NotBlank(message = "Parameter \"to\" must not be blank") String to,
                                         @AuthenticationPrincipal CustomUserDetails userDetails) {
 
-        return s3UserService.moveResource(userDetails.getId(), from, to);
+        return storageService.moveResource(userDetails.getId(), from, to);
     }
 
 
@@ -381,7 +379,7 @@ public class ResourceController {
                                                 String query,
                                                 @AuthenticationPrincipal CustomUserDetails userDetails) {
 
-        return s3UserService.searchResource(userDetails.getId(), query);
+        return storageService.searchResource(userDetails.getId(), query);
     }
 
 
@@ -452,10 +450,9 @@ public class ResourceController {
     )
     @PostMapping(consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
     @ResponseStatus(HttpStatus.CREATED)
-    public List<ResourceInfoResponseDTO> upload(@RequestParam(name = "path") String path,
-                                                @RequestParam(name = "object") MultipartFile[] files,
+    public List<ResourceInfoResponseDTO> upload(@RequestParam("path") String path,
+                                                @RequestPart("object") List<MultipartFile> files,
                                                 @AuthenticationPrincipal CustomUserDetails userDetails) {
-
-        return s3UserService.upload(userDetails.getId(), path, files);
+        return storageService.upload(userDetails.getId(), path, files);
     }
 }

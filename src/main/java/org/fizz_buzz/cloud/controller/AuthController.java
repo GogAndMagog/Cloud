@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import org.springframework.security.web.authentication.logout.LogoutHandler;
 import org.springframework.web.bind.annotation.RequestBody;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
@@ -14,19 +15,18 @@ import org.fizz_buzz.cloud.dto.MessageDTO;
 import org.fizz_buzz.cloud.dto.request.UserRequestDTO;
 import org.fizz_buzz.cloud.dto.response.UserResponseDTO;
 import org.fizz_buzz.cloud.service.AuthService;
-import org.fizz_buzz.cloud.service.S3UserService;
+import org.fizz_buzz.cloud.service.StorageService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @Tag(
         name = "Auth management",
-        description = "Authentication and authorization created in RPC-architecture style"
+        description = "Authentication and authorization created in RPC naming style"
 )
 @RestController
 @RequestMapping(value = "/api/v1/auth")
@@ -34,8 +34,8 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthService authService;
-    private final S3UserService s3UserService;
-    private final SecurityContextLogoutHandler logoutHandler = new SecurityContextLogoutHandler();
+    private final StorageService storageService;
+    private final LogoutHandler logoutHandler;
 
 
     @Operation(
@@ -84,12 +84,10 @@ public class AuthController {
             }
     )
     @PostMapping(value = "/sign-up")
-    public ResponseEntity<UserResponseDTO> signUp(@Valid @RequestBody UserRequestDTO request,
-                                                  HttpServletRequest httpServletRequest,
-                                                  HttpServletResponse httpServletResponse) {
+    public ResponseEntity<UserResponseDTO> signUp(@RequestBody @Valid UserRequestDTO request) {
 
-        var user = authService.signUp(request, httpServletRequest, httpServletResponse);
-        s3UserService.createUserDirectory(user.getId());
+        var user = authService.signUp(request);
+        storageService.createUserDirectory(user.getId());
 
         return new ResponseEntity<>(new UserResponseDTO(user.getName()), HttpStatus.CREATED);
     }
@@ -140,13 +138,8 @@ public class AuthController {
             }
     )
     @PostMapping(value = "/sign-in")
-    public ResponseEntity<UserResponseDTO> signIn(@Valid @RequestBody UserRequestDTO request,
-                                                  HttpServletRequest httpServletRequest,
-                                                  HttpServletResponse httpServletResponse) {
-
-        var response = authService.signIn(request, httpServletRequest, httpServletResponse);
-
-        return new ResponseEntity<>(response, HttpStatus.OK);
+    public ResponseEntity<UserResponseDTO> signIn(@RequestBody @Valid UserRequestDTO request) {
+        return ResponseEntity.ok(authService.signIn(request));
     }
 
     @Operation(
@@ -175,12 +168,11 @@ public class AuthController {
             }
     )
     @PostMapping(value = "/sign-out")
-    public ResponseEntity<Void> signOut(Authentication authentication,
-                                        HttpServletRequest request,
-                                        HttpServletResponse response) {
-
+    public ResponseEntity<Void> signOut(HttpServletRequest request,
+                                        HttpServletResponse response,
+                                        Authentication authentication) {
         this.logoutHandler.logout(request, response, authentication);
 
-        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+        return ResponseEntity.noContent().build();
     }
 }

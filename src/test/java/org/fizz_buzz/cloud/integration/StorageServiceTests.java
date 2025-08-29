@@ -3,7 +3,7 @@ package org.fizz_buzz.cloud.integration;
 
 import org.fizz_buzz.cloud.exception.NotDirectoryException;
 import org.fizz_buzz.cloud.repository.S3Repository;
-import org.fizz_buzz.cloud.service.S3UserService;
+import org.fizz_buzz.cloud.service.StorageService;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,13 +11,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import static org.junit.jupiter.api.Assertions.*;
 
 
-public class S3UserServiceTests extends IntegrationTestBaseClass {
+public class StorageServiceTests extends IntegrationTestBaseClass {
 
     private static final String DEFAULT_BUCKET = "user-files";
     private final static String USER_DIRECTORY = "user-%d-files/";
 
     @Autowired
-    private S3UserService s3UserService;
+    private StorageService storageService;
     @Autowired
     private S3Repository s3Repository;
     private static long currentUserId = 0;
@@ -27,7 +27,7 @@ public class S3UserServiceTests extends IntegrationTestBaseClass {
 
         long userId = nextUserId();
 
-        s3UserService.createUserDirectory(userId);
+        storageService.createUserDirectory(userId);
 
         assertTrue(s3Repository.isObjectExists(DEFAULT_BUCKET, getTechnicalName(userId, "")));
     }
@@ -44,8 +44,8 @@ public class S3UserServiceTests extends IntegrationTestBaseClass {
         long userId = nextUserId();
         String directoryName = "Test/";
 
-        s3UserService.createUserDirectory(userId);
-        s3UserService.createDirectory(userId, directoryName);
+        storageService.createUserDirectory(userId);
+        storageService.createDirectory(userId, directoryName);
 
         assertTrue(s3Repository.isObjectExists(DEFAULT_BUCKET, getTechnicalName(userId, directoryName)));
     }
@@ -56,9 +56,9 @@ public class S3UserServiceTests extends IntegrationTestBaseClass {
         long userId = nextUserId();
         String directoryName = "Test";
 
-        s3UserService.createUserDirectory(userId);
+        storageService.createUserDirectory(userId);
 
-        assertThrows(NotDirectoryException.class, () -> s3UserService.createDirectory(userId, directoryName));
+        assertThrows(NotDirectoryException.class, () -> storageService.createDirectory(userId, directoryName));
     }
 
     @Test
@@ -68,9 +68,9 @@ public class S3UserServiceTests extends IntegrationTestBaseClass {
         long userId = nextUserId();
         String directoryName = "Test::<>/";
 
-        s3UserService.createUserDirectory(userId);
+        storageService.createUserDirectory(userId);
 
-        assertThrows(NotDirectoryException.class, () -> s3UserService.createDirectory(userId, directoryName));
+        assertThrows(NotDirectoryException.class, () -> storageService.createDirectory(userId, directoryName));
     }
 
     @Test
@@ -79,8 +79,8 @@ public class S3UserServiceTests extends IntegrationTestBaseClass {
         long userId = nextUserId();
         String directoryName = "Test/Nested/";
 
-        s3UserService.createUserDirectory(userId);
-        s3UserService.createDirectory(userId, directoryName);
+        storageService.createUserDirectory(userId);
+        storageService.createDirectory(userId, directoryName);
 
         assertAll(
                 () -> assertTrue(s3Repository.isObjectExists(DEFAULT_BUCKET, getTechnicalName(userId, "Test/"))),

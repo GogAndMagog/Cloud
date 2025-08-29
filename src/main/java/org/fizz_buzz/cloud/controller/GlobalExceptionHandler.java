@@ -5,7 +5,7 @@ import org.fizz_buzz.cloud.exception.EmptyPathException;
 import org.fizz_buzz.cloud.exception.ForbiddenSymbolException;
 import org.fizz_buzz.cloud.exception.NotDirectoryException;
 import org.fizz_buzz.cloud.exception.ResourceAlreadyExistsException;
-import org.fizz_buzz.cloud.exception.ResourceNotFound;
+import org.fizz_buzz.cloud.exception.ResourceNotFoundException;
 import org.fizz_buzz.cloud.exception.UserAlreadyExists;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
@@ -71,9 +71,9 @@ public class GlobalExceptionHandler {
         return new MessageDTO(e.getMessage());
     }
 
-    @ExceptionHandler(ResourceNotFound.class)
+    @ExceptionHandler(ResourceNotFoundException.class)
     @ResponseStatus(HttpStatus.NOT_FOUND)
-    public MessageDTO handleResourceNotFoundException(ResourceNotFound e) {
+    public MessageDTO handleResourceNotFoundException(ResourceNotFoundException e) {
 
         return new MessageDTO(e.getMessage());
     }

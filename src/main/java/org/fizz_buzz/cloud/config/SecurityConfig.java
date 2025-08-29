@@ -1,70 +1,67 @@
 package org.fizz_buzz.cloud.config;
 
-import org.springframework.beans.factory.annotation.Qualifier;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
-import org.springframework.security.web.AuthenticationEntryPoint;
-import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configurers.CsrfConfigurer;
+import org.springframework.security.config.annotation.web.configurers.FormLoginConfigurer;
+import org.springframework.security.config.annotation.web.configurers.LogoutConfigurer;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
+import org.springframework.security.web.authentication.logout.LogoutHandler;
+import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
 
 import java.util.List;
 
 @Configuration
 public class SecurityConfig {
 
-    @Qualifier("delegatedAuthenticationEntryPoint")
-    AuthenticationEntryPoint authEntryPoint;
-
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-
         http.authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/api/v1/auth/sign-up",
+                        .requestMatchers(
+                                "/api/v1/auth/sign-up",
                                 "/api/v1/auth/sign-in",
-                                "/actuator/health").permitAll()
-                        .anyRequest().authenticated())
-                // Включаем CORS и разрешаем все источники, методы и заголовки
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .csrf(AbstractHttpConfigurer::disable)          
-                .formLogin(form -> form.disable())
-                .logout(logout -> logout.disable())
-                .exceptionHandling(configurer -> configurer.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
-        ;
+                                "/actuator/health",
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**",
+                                "/webjars/**"
+                        ).permitAll()
+                        .anyRequest().authenticated()
+                )
+                .cors(cors -> cors
+                        .configurationSource(this::corsConfigurationSource)
+                )
+                .csrf(CsrfConfigurer::disable)
+                .formLogin(FormLoginConfigurer::disable)
+                .logout(LogoutConfigurer::disable)
+                .exceptionHandling(configurer -> configurer
+                        .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
+                );
         return http.build();
     }
 
-
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        return request -> {
-            CorsConfiguration config = new CorsConfiguration();
-            // Разрешаем все источники, или укажите конкретные
-            config.setAllowedOriginPatterns(List.of("*")); // Используйте setAllowedOriginPatterns для поддержки wildcard
-            // Разрешаем все методы
-            config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-            // Разрешаем все заголовки
-            config.setAllowedHeaders(List.of("*"));
-            // Разрешить отправку с credentials, если нужно
-            config.setAllowCredentials(true);
-            return config;
-        };
+    public CorsConfiguration corsConfigurationSource(HttpServletRequest request) {
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowedOriginPatterns(List.of("*"));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of("*"));
+        config.setAllowCredentials(true);
+        return config;
     }
 
     @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
-
-        return authenticationConfiguration.getAuthenticationManager();
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfiguration) throws Exception {
+        return authConfiguration.getAuthenticationManager();
     }
 
     @Bean
@@ -73,8 +70,12 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityContextRepository securityContextRepository(){
-
+    public SecurityContextRepository securityContextRepository() {
         return new HttpSessionSecurityContextRepository();
+    }
+
+    @Bean
+    public LogoutHandler logoutHandler() {
+        return new SecurityContextLogoutHandler();
     }
 }

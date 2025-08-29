@@ -45,7 +45,8 @@ services:
       retries: 5
 
   backend:
-    image: cloud-app
+    build:
+      dockerfile: ./Dockerfile
     ports:
       - "8080:8080"
     depends_on:
@@ -56,13 +57,14 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: wget --no-verbose --tries=1 --spider http://localhost:8080/actuator/health || exit 1
-      interval: 5s
-      timeout: 5s
-      retries: 5
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s       # как часто запускать проверку
+      timeout: 10s        # таймаут одной проверки
+      retries: 3          # сколько раз пробовать перед тем как признать контейнер unhealthy
+      start_period: 20s   # время на "прогрев" приложения после старт
 
   frontend:
-    image: cloud-front-2
+    image: s1iva/cloud-frontend
     ports:
       - "8081:80"
     depends_on:

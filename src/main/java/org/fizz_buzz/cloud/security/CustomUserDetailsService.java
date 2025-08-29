@@ -1,8 +1,7 @@
-package org.fizz_buzz.cloud.service;
+package org.fizz_buzz.cloud.security;
 
 import lombok.RequiredArgsConstructor;
 import org.fizz_buzz.cloud.repository.UserRepository;
-import org.fizz_buzz.cloud.security.CustomUserDetails;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -16,10 +15,7 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-
-        var userEntity = userRepository.findByName(username);
-
-        return userEntity
+        return userRepository.findByName(username)
                 .map(CustomUserDetails::new)
                 .orElseThrow(() -> new UsernameNotFoundException(username));
     }

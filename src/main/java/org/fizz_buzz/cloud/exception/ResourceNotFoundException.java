@@ -1,10 +1,10 @@
 package org.fizz_buzz.cloud.exception;
 
-public class ResourceNotFound extends RuntimeException{
+public class ResourceNotFoundException extends RuntimeException{
 
     private static final String MESSAGE = "Resource: \"%s\" not found";
 
-    public ResourceNotFound(String resourcePath) {
+    public ResourceNotFoundException(String resourcePath) {
 
         super(MESSAGE.formatted(resourcePath));
     }

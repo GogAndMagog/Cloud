@@ -13,7 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.fizz_buzz.cloud.dto.response.ErrorMessageResponseDto;
 import org.fizz_buzz.cloud.dto.request.CreateDirectoryPathRequestParam;
 import org.fizz_buzz.cloud.dto.response.ResourceInfoResponseDTO;
-import org.fizz_buzz.cloud.request.GetDirectoryContentRequestParam;
+import org.fizz_buzz.cloud.dto.request.GetDirectoryContentRequestParam;
 import org.fizz_buzz.cloud.security.CustomUserDetails;
 import org.fizz_buzz.cloud.service.StorageService;
 import org.springframework.beans.propertyeditors.StringTrimmerEditor;

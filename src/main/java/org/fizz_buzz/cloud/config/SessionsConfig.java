@@ -23,6 +23,8 @@ public class SessionsConfig {
     }
 
     private ObjectMapper objectMapper() {
-        return new ObjectMapper().registerModules(SecurityJackson2Modules.getModules(this.loader));
+        return new ObjectMapper().registerModules(
+                SecurityJackson2Modules.getModules(this.loader)
+        );
     }
 }

@@ -10,7 +10,7 @@ public class CreateDirectoryPathRequestParam {
 
     @Path
     @Directory
-    @NotBlank(message = "Parameter \"path\" must not be blank")
+    @NotBlank(message = "Parameter 'path' must not be blank")
     private String path;
 
 }

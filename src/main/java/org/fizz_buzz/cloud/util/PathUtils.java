@@ -20,10 +20,9 @@ public class PathUtils {
 
     public List<String> extractInnerDirectories(String filename) {
         List<String> directories = new ArrayList<>();
+
         for (int i = 0; i < filename.length(); i++) {
-
             if (filename.charAt(i) == '/') {
-
                 directories.add(filename.substring(0, i + 1));
             }
         }

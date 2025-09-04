@@ -1,8 +1,6 @@
-package org.fizz_buzz.cloud.request;
+package org.fizz_buzz.cloud.dto.request;
 
 import io.swagger.v3.oas.annotations.Parameter;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotEmpty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;

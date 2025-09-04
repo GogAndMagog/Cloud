@@ -7,7 +7,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
 
 @Configuration
-@PropertySource("classpath:application.properties")
 public class S3StorageConfig {
 
     @Value("${minio.url}")
@@ -20,8 +19,7 @@ public class S3StorageConfig {
     private String secretKey;
 
     @Bean
-    MinioClient minioClient(){
-
+    public MinioClient minioClient(){
         return MinioClient.builder()
                 .endpoint(url)
                 .credentials(accessKey, secretKey)

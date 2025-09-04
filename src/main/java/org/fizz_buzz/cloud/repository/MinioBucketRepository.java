@@ -1,21 +1,18 @@
 package org.fizz_buzz.cloud.repository;
 
 import io.minio.BucketExistsArgs;
-import io.minio.ListObjectsArgs;
 import io.minio.MakeBucketArgs;
 import io.minio.MinioClient;
 import io.minio.RemoveBucketArgs;
-import io.minio.RemoveObjectsArgs;
-import io.minio.Result;
-import io.minio.messages.DeleteError;
-import io.minio.messages.DeleteObject;
-import io.minio.messages.Item;
+import io.minio.errors.ErrorResponseException;
+import io.minio.errors.MinioException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
-import java.util.LinkedList;
-import java.util.List;
+import java.io.IOException;
+import java.security.GeneralSecurityException;
+import java.util.Optional;
 
 @Slf4j
 @Repository
@@ -32,7 +29,7 @@ public class MinioBucketRepository implements S3BucketRepository {
                     .build();
 
             minioClient.makeBucket(request);
-        } catch (Exception e) {
+        } catch (IOException | GeneralSecurityException | MinioException e) {
             throw new RuntimeException(e);
         }
     }
@@ -41,35 +38,12 @@ public class MinioBucketRepository implements S3BucketRepository {
     public void delete(String name) {
 
         try {
-            ListObjectsArgs listObjectsRequest = ListObjectsArgs.builder()
-                    .bucket(name)
-                    .recursive(true)
-                    .build();
-
-            var objects = minioClient.listObjects(listObjectsRequest);
-
-            List<DeleteObject> deleteObjects = new LinkedList<>();
-
-            for (Result<Item> object : objects) {
-                deleteObjects.add(new DeleteObject(object.get().objectName()));
-            }
-
-            RemoveObjectsArgs removeObjectsRequest = RemoveObjectsArgs.builder()
-                    .bucket(name)
-                    .objects(deleteObjects)
-                    .build();
-
-            var result = minioClient.removeObjects(removeObjectsRequest);
-            for (Result<DeleteError> deleteErrorResult : result) {
-                deleteErrorResult.get();
-            }
-
             RemoveBucketArgs request = RemoveBucketArgs.builder()
                     .bucket(name)
                     .build();
 
             minioClient.removeBucket(request);
-        } catch (Exception e) {
+        } catch (IOException | GeneralSecurityException | MinioException e) {
             throw new RuntimeException(e);
         }
     }
@@ -82,8 +56,13 @@ public class MinioBucketRepository implements S3BucketRepository {
 
         try {
             return minioClient.bucketExists(request);
-        } catch (Exception e) {
-            return false;
+        } catch (ErrorResponseException e) {
+            if (e.errorResponse().code().equals("NoSuchKey")) {
+                return false;
+            }
+            throw new RuntimeException(e);
+        } catch (IOException | GeneralSecurityException | MinioException e) {
+            throw new RuntimeException(e);
         }
     }
 }

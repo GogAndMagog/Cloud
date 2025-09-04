@@ -13,6 +13,8 @@ import org.fizz_buzz.cloud.mapper.ResourceInfoMapper;
 import org.fizz_buzz.cloud.model.ResourceInfo;
 import org.fizz_buzz.cloud.repository.S3ObjectRepository;
 import org.fizz_buzz.cloud.util.PathUtils;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;

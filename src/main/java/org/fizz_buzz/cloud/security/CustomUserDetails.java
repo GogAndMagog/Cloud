@@ -19,39 +19,20 @@ import java.util.List;
 @JsonIgnoreProperties(ignoreUnknown = true)
 @NoArgsConstructor(force = true)
 @Setter
+@Getter
 public class CustomUserDetails implements UserDetails {
 
-    @Serial
-    private static final long serialVersionUID = 42L;
+    private long id;
 
-    @Getter
-    @JsonProperty("id")
-    private final long id;
-    @JsonProperty("username")
-    private final String username;
-    @JsonProperty("password")
-    private final String password;
-    @JsonProperty("authorities")
-    private final List<GrantedAuthority> authorities = new ArrayList<>();
+    private String username;
+
+    private String password;
+
+    private List<GrantedAuthority> authorities = new ArrayList<>();
 
     public CustomUserDetails(User user) {
         this.id = user.getId();
         this.username = user.getName();
         this.password = user.getPassword();
-    }
-
-    @Override
-    public Collection<? extends GrantedAuthority> getAuthorities() {
-        return authorities;
-    }
-
-    @Override
-    public String getPassword() {
-        return password;
-    }
-
-    @Override
-    public String getUsername() {
-        return username;
     }
 }

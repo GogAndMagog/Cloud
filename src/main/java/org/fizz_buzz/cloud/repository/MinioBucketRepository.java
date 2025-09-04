@@ -64,9 +64,11 @@ public class MinioBucketRepository implements S3BucketRepository {
                 deleteErrorResult.get();
             }
 
-            minioClient.removeBucket(RemoveBucketArgs.builder()
+            RemoveBucketArgs request = RemoveBucketArgs.builder()
                     .bucket(name)
-                    .build());
+                    .build();
+
+            minioClient.removeBucket(request);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

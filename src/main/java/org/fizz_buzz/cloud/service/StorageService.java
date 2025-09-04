@@ -11,9 +11,8 @@ import org.fizz_buzz.cloud.exception.ResourceNotFoundException;
 import org.fizz_buzz.cloud.exception.S3RepositoryException;
 import org.fizz_buzz.cloud.mapper.ResourceInfoMapper;
 import org.fizz_buzz.cloud.model.ResourceInfo;
-import org.fizz_buzz.cloud.repository.S3BucketRepository;
 import org.fizz_buzz.cloud.repository.S3ObjectRepository;
-import org.springframework.beans.factory.annotation.Value;
+import org.fizz_buzz.cloud.util.PathUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
@@ -21,7 +20,6 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -38,24 +36,14 @@ public class StorageService {
 
     private final static String USER_DIRECTORY_TEMPLATE = "user-%d-files/";
 
-    @Value("${application.default-bucket-name}")
-    private String bucketName;
-
     private final S3ObjectRepository s3ObjectRepository;
-    private final S3BucketRepository s3BucketRepository;
     private final ResourceInfoMapper resourceInfoMapper;
 
-
-    public void createUserBucketIfNotExist() {
-        if (!s3BucketRepository.exists(bucketName)) {
-            s3BucketRepository.create(bucketName);
-        }
-    }
 
     public ResourceInfoResponseDTO getResource(long userId, String resourcePath) {
         String fullPath = USER_DIRECTORY_TEMPLATE.formatted(userId).concat(resourcePath);
 
-        return s3ObjectRepository.findInfoByPath(bucketName, fullPath)
+        return s3ObjectRepository.findInfoByPath(fullPath)
                 .map(resourceInfoMapper::toDto)
                 .orElseThrow(() -> new ResourceNotFoundException(resourcePath));
     }
@@ -63,65 +51,54 @@ public class StorageService {
     public void deleteResource(long userId, String resourcePath) {
         String fullPath = USER_DIRECTORY_TEMPLATE.formatted(userId).concat(resourcePath);
 
-        if (!s3ObjectRepository.existsByPath(bucketName, fullPath)) {
+        if (!existsByPath(fullPath)) {
             throw new ResourceNotFoundException(resourcePath);
         }
 
-        if (isDirectory(resourcePath)) {
-            List<String> directoryEntries = s3ObjectRepository.findAllInfoByPrefix(bucketName, fullPath, true)
+        if (PathUtils.isDirectory(resourcePath)) {
+            List<String> directoryEntries = s3ObjectRepository.findAllInfoByPrefix(fullPath, true)
                     .stream()
                     .map(ResourceInfo::getKey)
                     .toList();
 
-            s3ObjectRepository.deleteAll(bucketName, directoryEntries);
+            s3ObjectRepository.deleteAll(directoryEntries);
         } else {
-            s3ObjectRepository.delete(bucketName, fullPath);
+            s3ObjectRepository.delete(fullPath);
         }
-    }
-
-    public void createUserDirectory(long userId) {
-        String userDirectory = USER_DIRECTORY_TEMPLATE.formatted(userId);
-
-        ResourceInfo resourceInfo = new ResourceInfo(userDirectory, -1L);
-        InputStream directoryFlag = new ByteArrayInputStream(new byte[0]);
-
-        s3ObjectRepository.save(bucketName, resourceInfo, directoryFlag);
     }
 
     public StreamingResponseBody downloadResource(long userId, String resourcePath) {
         String fullPath = USER_DIRECTORY_TEMPLATE.formatted(userId).concat(resourcePath);
 
-        if (!isDirectory(resourcePath)) {
+        if (!PathUtils.isDirectory(resourcePath)) {
             return outputStream -> {
-                try (InputStream resource = s3ObjectRepository.getByPath(bucketName, fullPath)) {
+                try (InputStream resource = s3ObjectRepository.getByPath(fullPath)) {
                     resource.transferTo(outputStream);
                 }
             };
         }
 
-        int filenameOffset = fullPath.length() - Paths.get(fullPath).getFileName().toString().length();
+        int filenameOffset = fullPath.length() - PathUtils.extractFilename(fullPath).length();
 
         return outputStream -> {
             ZipOutputStream zos = new ZipOutputStream(outputStream);
 
-            List<String> resources = s3ObjectRepository.findAllInfoByPrefix(bucketName, fullPath, true)
-                    .stream()
-                    .map(ResourceInfo::getKey)
-                    .toList();
+            List<ResourceInfo> resources = s3ObjectRepository.findAllInfoByPrefix(fullPath, true);
 
-            for (String fullPathToFile : resources) {
-                InputStream resource = s3ObjectRepository.getByPath(bucketName, fullPathToFile);
+            for (ResourceInfo resourceInfo : resources) {
+                String fullPathToFile = resourceInfo.getKey();
 
-                String zipEntryName = fullPathToFile.substring(filenameOffset);
-                ZipEntry zipEntry = new ZipEntry(zipEntryName);
-                zos.putNextEntry(zipEntry);
+                try (InputStream resource = s3ObjectRepository.getByPath(fullPathToFile)) {
+                    String zipEntryName = fullPathToFile.substring(filenameOffset);
+                    ZipEntry zipEntry = new ZipEntry(zipEntryName);
+                    zos.putNextEntry(zipEntry);
 
-                if (!isDirectory(fullPathToFile)) {
-                    resource.transferTo(zos);
+                    if (!PathUtils.isDirectory(fullPathToFile)) {
+                        resource.transferTo(zos);
+                    }
+
+                    zos.closeEntry();
                 }
-
-                zos.closeEntry();
-                resource.close();
             }
             zos.finish();
             zos.close();
@@ -133,28 +110,28 @@ public class StorageService {
 
         String oldFullPath = userDirectory.concat(oldPath);
 
-        if (!s3ObjectRepository.existsByPath(bucketName, oldFullPath)) {
+        if (!existsByPath(oldFullPath)) {
             throw new ResourceNotFoundException(oldPath);
         }
 
         String newFullPath = userDirectory.concat(newPath);
 
-        if (s3ObjectRepository.existsByPath(bucketName, newFullPath)) {
+        if (existsByPath(newFullPath)) {
             throw new ResourceAlreadyExistsException(newPath);
         }
 
-        if (isDirectory(oldPath)) {
-            s3ObjectRepository.findAllInfoByPrefix(bucketName, oldFullPath, true)
+        if (PathUtils.isDirectory(oldPath)) {
+            s3ObjectRepository.findAllInfoByPrefix(oldFullPath, true)
                     .stream()
                     .map(ResourceInfo::getKey)
-                    .forEach(key -> s3ObjectRepository.copy(bucketName, key, key.replace(oldFullPath, newFullPath)));
+                    .forEach(key -> s3ObjectRepository.copy(key, key.replace(oldFullPath, newFullPath)));
         } else {
-            s3ObjectRepository.copy(bucketName, oldFullPath, newFullPath);
+            s3ObjectRepository.copy(oldFullPath, newFullPath);
         }
 
-        s3ObjectRepository.delete(bucketName, oldFullPath);
+        s3ObjectRepository.delete(oldFullPath);
 
-        return s3ObjectRepository.findInfoByPath(bucketName, newFullPath)
+        return s3ObjectRepository.findInfoByPath(newFullPath)
                 .map(resourceInfoMapper::toDto)
                 .orElseThrow(() -> new ResourceNotFoundException(newFullPath));
     }
@@ -162,7 +139,7 @@ public class StorageService {
     public List<ResourceInfoResponseDTO> searchResource(long userId, String query) {
         String userDirectory = USER_DIRECTORY_TEMPLATE.formatted(userId);
 
-        return s3ObjectRepository.findAllInfoByPrefix(bucketName, userDirectory, true)
+        return s3ObjectRepository.findAllInfoByPrefix(userDirectory, true)
                 .stream()
                 .filter(info -> StringUtils.containsIgnoreCase(
                         info.getKey().replace(userDirectory, ""), query
@@ -172,19 +149,18 @@ public class StorageService {
     }
 
     public List<ResourceInfoResponseDTO> upload(long userId, String uploadPath, List<MultipartFile> files) {
-
-        if (!uploadPath.isBlank() && !isDirectory(uploadPath)) {
+        if (!PathUtils.isDirectory(uploadPath)) {
             throw new NotDirectoryException(uploadPath);
         }
 
         String rootPath = USER_DIRECTORY_TEMPLATE.formatted(userId).concat(uploadPath);
 
-        if (!s3ObjectRepository.existsByPath(bucketName, rootPath)) {
+        if (!existsByPath(rootPath)) {
             throw new DirectoryNotExistException(uploadPath);
         }
 
-        Set<String> directories = new HashSet<>();
         Map<ResourceInfo, InputStream> resources = new HashMap<>();
+        Set<String> directories = new HashSet<>();
 
         for (MultipartFile file : files) {
             String filename = file.getOriginalFilename();
@@ -193,27 +169,13 @@ public class StorageService {
                 throw new EmptyFilenameException("Filename cannot be empty");
             }
 
-            if (s3ObjectRepository.existsByPath(bucketName, rootPath.concat(filename))) {
+            if (existsByPath(rootPath.concat(filename))) {
                 throw new ResourceAlreadyExistsException(filename);
             }
 
-            for (int i = 0; i < filename.length(); i++) {
+            directories.addAll(PathUtils.extractInnerDirectories(filename));
 
-                if (filename.charAt(i) == '/') {
-
-                    String directory = rootPath.concat(filename.substring(0, i + 1));
-
-                    if (s3ObjectRepository.existsByPath(bucketName, directory)) {
-                        throw new ResourceAlreadyExistsException(filename);
-                    }
-                    directories.add(directory);
-                }
-            }
-
-
-            if (isDirectory(filename)) {
-                directories.add(filename);
-            } else {
+            if (!PathUtils.isDirectory(rootPath)) {
                 String fullPathToFile = rootPath.concat(filename);
                 ResourceInfo resourceInfo = new ResourceInfo(fullPathToFile, file.getSize());
                 try {
@@ -225,45 +187,65 @@ public class StorageService {
         }
 
         for (String directory : directories) {
-            ResourceInfo directoryInfo = new ResourceInfo(directory, -1L);
-            InputStream directoryFlag = new ByteArrayInputStream(new byte[0]);
-            s3ObjectRepository.save(bucketName, directoryInfo, directoryFlag);
+            String fullPathToDirectory = rootPath.concat(directory);
+
+            if (existsByPath(fullPathToDirectory)) {
+                throw new ResourceAlreadyExistsException(directory);
+            }
+
+            ResourceInfo directoryInfo = new ResourceInfo(fullPathToDirectory, -1L);
+            InputStream directoryObject = new ByteArrayInputStream(new byte[0]);
+
+            resources.put(directoryInfo, directoryObject);
         }
 
         if (resources.size() == 1) {
             resources.forEach((resourceInfo, dataStream) -> {
                 try (dataStream) {
-                    s3ObjectRepository.save(bucketName, resourceInfo, dataStream);
+                    s3ObjectRepository.save(resourceInfo, dataStream);
                 } catch (IOException e) {
                     throw new S3RepositoryException(e);
                 }
             });
         } else {
-            s3ObjectRepository.saveAll(bucketName, resources);
+            s3ObjectRepository.saveAll(resources);
         }
 
         return resources.keySet().stream()
                 .map(ResourceInfo::getKey)
-                .map(key -> s3ObjectRepository.findInfoByPath(bucketName, key))
+                .filter(path -> !PathUtils.isDirectory(path))
+                .map(s3ObjectRepository::findInfoByPath)
                 .flatMap(Optional::stream)
                 .map(resourceInfoMapper::toDto)
                 .toList();
     }
 
-    public List<ResourceInfoResponseDTO> getDirectory(long userId, String path) {
+    private boolean existsByPath(String path) {
+        return s3ObjectRepository.findInfoByPath(path).isPresent();
+    }
 
-        if (!isDirectory(path) && !path.isBlank()) {
+    public void createUserDirectory(long userId) {
+        String userDirectory = USER_DIRECTORY_TEMPLATE.formatted(userId);
+
+        ResourceInfo directoryInfo = new ResourceInfo(userDirectory, -1L);
+        InputStream directoryObject = new ByteArrayInputStream(new byte[0]);
+
+        s3ObjectRepository.save(directoryInfo, directoryObject);
+    }
+
+    public List<ResourceInfoResponseDTO> getDirectory(long userId, String path) {
+        if (!PathUtils.isDirectory(path) && !path.isBlank()) {
             throw new NotDirectoryException(path);
         }
 
         String currentUserDirectory = USER_DIRECTORY_TEMPLATE.formatted(userId);
         String fullPath = currentUserDirectory.concat(path);
 
-        if (!s3ObjectRepository.existsByPath(bucketName, fullPath)) {
+        if (!existsByPath(fullPath)) {
             throw new ResourceNotFoundException(path);
         }
 
-        return s3ObjectRepository.findAllInfoByPrefix(bucketName, fullPath, false)
+        return s3ObjectRepository.findAllInfoByPrefix(fullPath, false)
                 .stream()
                 .filter(info -> !info.getKey().equals(fullPath))
                 .map(resourceInfoMapper::toDto)
@@ -272,27 +254,23 @@ public class StorageService {
 
     public ResourceInfoResponseDTO createDirectory(long userId, String path) {
 
-        if (!isDirectory(path)) {
+        if (!PathUtils.isDirectory(path)) {
             throw new NotDirectoryException(path);
         }
 
         String fullPath = USER_DIRECTORY_TEMPLATE.formatted(userId).concat(path);
 
-        if (s3ObjectRepository.existsByPath(bucketName, path)) {
+        if (existsByPath(path)) {
             throw new ResourceAlreadyExistsException(fullPath);
         }
 
         ResourceInfo directoryInfo = new ResourceInfo(fullPath, -1L);
-        ByteArrayInputStream directoryFlag = new ByteArrayInputStream(new byte[0]);
+        InputStream directoryObject = new ByteArrayInputStream(new byte[0]);
 
-        s3ObjectRepository.save(bucketName, directoryInfo, directoryFlag);
+        s3ObjectRepository.save(directoryInfo, directoryObject);
 
-        return s3ObjectRepository.findInfoByPath(bucketName, fullPath)
+        return s3ObjectRepository.findInfoByPath(fullPath)
                 .map(resourceInfoMapper::toDto)
                 .orElseThrow(() -> new ResourceNotFoundException(fullPath));
-    }
-
-    private boolean isDirectory(String path) {
-        return path.endsWith("/");
     }
 }

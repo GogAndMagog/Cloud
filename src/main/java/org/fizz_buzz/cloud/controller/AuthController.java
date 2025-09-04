@@ -11,13 +11,11 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.fizz_buzz.cloud.dto.MessageDTO;
+import org.fizz_buzz.cloud.dto.response.ErrorMessageResponseDto;
 import org.fizz_buzz.cloud.dto.request.UserRequestDTO;
 import org.fizz_buzz.cloud.dto.response.UserResponseDTO;
 import org.fizz_buzz.cloud.service.AuthService;
-import org.fizz_buzz.cloud.service.StorageService;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -34,7 +32,6 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthService authService;
-    private final StorageService storageService;
     private final LogoutHandler logoutHandler;
 
 
@@ -43,53 +40,34 @@ public class AuthController {
             description = "Registration method takes JSON with credentials and register user in system.",
             requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
                     description = "User credentials",
-                    content = @Content(
-                            mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(implementation = UserRequestDTO.class)
-                    )
+                    content = @Content(schema = @Schema(implementation = UserRequestDTO.class))
             ),
             responses = {
                     @ApiResponse(
                             description = "Registration success",
                             responseCode = "201",
-                            content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = UserResponseDTO.class)
-                            )
+                            content = @Content(schema = @Schema(implementation = UserResponseDTO.class))
                     ),
                     @ApiResponse(
                             description = "Validation error",
                             responseCode = "400",
-                            content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = MessageDTO.class)
-                            )
+                            content = @Content(schema = @Schema(implementation = ErrorMessageResponseDto.class))
                     ),
                     @ApiResponse(
                             description = "User with that name already exists",
                             responseCode = "409",
-                            content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = MessageDTO.class)
-                            )
+                            content = @Content(schema = @Schema(implementation = ErrorMessageResponseDto.class))
                     ),
                     @ApiResponse(
                             description = "Internal server error",
                             responseCode = "500",
-                            content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = MessageDTO.class)
-                            )
+                            content = @Content(schema = @Schema(implementation = ErrorMessageResponseDto.class))
                     )
             }
     )
     @PostMapping(value = "/sign-up")
     public ResponseEntity<UserResponseDTO> signUp(@RequestBody @Valid UserRequestDTO request) {
-
-        var user = authService.signUp(request);
-        storageService.createUserDirectory(user.getId());
-
-        return new ResponseEntity<>(new UserResponseDTO(user.getName()), HttpStatus.CREATED);
+        return ResponseEntity.status(HttpStatus.CREATED).body(authService.signUp(request));
     }
 
     @Operation(
@@ -97,43 +75,28 @@ public class AuthController {
             description = "Login method takes JSON with credentials and creates session for user.",
             requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
                     description = "User credentials",
-                    content = @Content(
-                            mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(implementation = UserRequestDTO.class)
-                    )
+                    content = @Content(schema = @Schema(implementation = UserRequestDTO.class))
             ),
             responses = {
                     @ApiResponse(
                             description = "Registration success",
                             responseCode = "200",
-                            content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = UserResponseDTO.class)
-                            )
+                            content = @Content(schema = @Schema(implementation = UserResponseDTO.class))
                     ),
                     @ApiResponse(
                             description = "Validation error",
                             responseCode = "400",
-                            content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = MessageDTO.class)
-                            )
+                            content = @Content(schema = @Schema(implementation = ErrorMessageResponseDto.class))
                     ),
                     @ApiResponse(
                             description = "Wrong credentials",
                             responseCode = "401",
-                            content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = MessageDTO.class)
-                            )
+                            content = @Content(schema = @Schema(implementation = ErrorMessageResponseDto.class))
                     ),
                     @ApiResponse(
                             description = "Internal server error",
                             responseCode = "500",
-                            content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = MessageDTO.class)
-                            )
+                            content = @Content(schema = @Schema(implementation = ErrorMessageResponseDto.class))
                     )
             }
     )
@@ -152,18 +115,12 @@ public class AuthController {
                     @ApiResponse(
                             description = "Unauthorized user",
                             responseCode = "401",
-                            content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = MessageDTO.class)
-                            )
+                            content = @Content(schema = @Schema(implementation = ErrorMessageResponseDto.class))
                     ),
                     @ApiResponse(
                             description = "Internal server error",
                             responseCode = "500",
-                            content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = MessageDTO.class)
-                            )
+                            content = @Content(schema = @Schema(implementation = ErrorMessageResponseDto.class))
                     )
             }
     )

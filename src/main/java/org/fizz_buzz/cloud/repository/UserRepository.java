@@ -1,6 +1,6 @@
 package org.fizz_buzz.cloud.repository;
 
-import org.fizz_buzz.cloud.model.User;
+import org.fizz_buzz.cloud.entity.User;
 import org.springframework.data.repository.CrudRepository;
 
 import java.util.Optional;

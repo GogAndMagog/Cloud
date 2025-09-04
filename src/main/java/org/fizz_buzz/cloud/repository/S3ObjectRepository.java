@@ -1,7 +1,6 @@
 package org.fizz_buzz.cloud.repository;
 
 import org.fizz_buzz.cloud.model.ResourceInfo;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.io.InputStream;
 import java.util.List;
@@ -10,21 +9,19 @@ import java.util.Optional;
 
 public interface S3ObjectRepository {
 
-    void delete(String bucket, String path);
+    List<ResourceInfo> findAllInfoByPrefix(String prefix, boolean recursive);
 
-    void deleteAll(String bucket, List<String> paths);
+    InputStream getByPath(String path);
 
-    List<ResourceInfo> findAllInfoByPrefix(String bucket, String prefix, boolean recursive);
+    Optional<ResourceInfo> findInfoByPath(String path);
 
-    InputStream getByPath(String bucket, String path);
+    void copy(String existingPath, String newPath);
 
-    void save(String bucket, ResourceInfo resourceInfo, InputStream dataStream);
+    void save(ResourceInfo resourceInfo, InputStream dataStream);
 
-    Optional<ResourceInfo> findInfoByPath(String bucket, String path);
+    void saveAll(Map<ResourceInfo, InputStream> objects);
 
-    boolean existsByPath(String bucket, String path);
+    void delete(String path);
 
-    void copy(String bucket, String existingPath, String newPath);
-
-    void saveAll(String bucket, Map<ResourceInfo, InputStream> files);
+    void deleteAll(List<String> paths);
 }

@@ -2,7 +2,6 @@ package org.fizz_buzz.cloud.validation.annotation;
 
 import jakarta.validation.Constraint;
 import jakarta.validation.Payload;
-import org.fizz_buzz.cloud.validation.DirectoryConstraintValidator;
 import org.fizz_buzz.cloud.validation.PathConstraintValidator;
 
 import java.lang.annotation.Documented;

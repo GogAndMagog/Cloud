@@ -6,16 +6,20 @@ import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
-import org.fizz_buzz.cloud.dto.MessageDTO;
+import org.fizz_buzz.cloud.dto.response.ErrorMessageResponseDto;
+import org.fizz_buzz.cloud.dto.request.DeleteResourcePathRequestParam;
+import org.fizz_buzz.cloud.dto.request.GetResourceRequestParam;
 import org.fizz_buzz.cloud.dto.response.ResourceInfoResponseDTO;
 import org.fizz_buzz.cloud.security.CustomUserDetails;
 import org.fizz_buzz.cloud.service.StorageService;
+import org.fizz_buzz.cloud.util.PathUtils;
 import org.springframework.beans.propertyeditors.StringTrimmerEditor;
-import org.springframework.http.HttpHeaders;
+import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -33,17 +37,9 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
-import java.io.UnsupportedEncodingException;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.List;
 
-@Tag(
-        name = "Resource management",
-        description = "This part is a standard REST API"
-)
+@Tag(name = "Resource management", description = "This part is a standard REST API")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/resource")
@@ -69,7 +65,6 @@ public class ResourceController {
                             description = "Registration success",
                             responseCode = "200",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
                                     schema = @Schema(implementation = ResourceInfoResponseDTO.class)
                             )
                     ),
@@ -77,100 +72,61 @@ public class ResourceController {
                             description = "Validation error or path doesn't exist",
                             responseCode = "400",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = MessageDTO.class)
+                                    schema = @Schema(implementation = ErrorMessageResponseDto.class)
                             )
                     ),
                     @ApiResponse(
                             description = "Unauthorized user",
                             responseCode = "401",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = MessageDTO.class)
+                                    schema = @Schema(implementation = ErrorMessageResponseDto.class)
                             )
                     ),
                     @ApiResponse(
                             description = "Resource not found",
                             responseCode = "404",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = MessageDTO.class)
+                                    schema = @Schema(implementation = ErrorMessageResponseDto.class)
                             )
                     ),
                     @ApiResponse(
                             description = "Internal server error",
                             responseCode = "500",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = MessageDTO.class)
+                                    schema = @Schema(implementation = ErrorMessageResponseDto.class)
                             )
                     )
             }
     )
     @GetMapping
-    public ResourceInfoResponseDTO getResource(@Valid
-                                               @RequestParam(name = "path")
-                                               @NotBlank(message = "Parameter \"path\" must not be blank") String path,
+    public ResourceInfoResponseDTO getResource(@Valid @RequestParam("path") GetResourceRequestParam request,
                                                @AuthenticationPrincipal CustomUserDetails userDetails) {
-
-        return storageService.getResource(userDetails.getId(), path);
+        return storageService.getResource(userDetails.getId(), request.getPath());
     }
 
 
-    @Operation(
-            summary = "Delete resource",
-            description = "Delete resource by path prefix.",
-            parameters = @Parameter(
-                    name = "path",
-                    description = "Prefix can be concrete file or directory"
-            ),
-            responses = {
-                    @ApiResponse(
-                            description = "Successful deletion",
-                            responseCode = "204"
-                    ),
-                    @ApiResponse(
-                            description = "Validation error or path doesn't exist",
-                            responseCode = "400",
-                            content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = MessageDTO.class)
-                            )
-                    ),
-                    @ApiResponse(
-                            description = "Unauthorized user",
-                            responseCode = "401",
-                            content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = MessageDTO.class)
-                            )
-                    ),
-                    @ApiResponse(
-                            description = "Resource not found",
-                            responseCode = "404",
-                            content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = MessageDTO.class)
-                            )
-                    ),
-                    @ApiResponse(
-                            description = "Internal server error",
-                            responseCode = "500",
-                            content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = MessageDTO.class)
-                            )
-                    )
-            }
-    )
+    @Operation(summary = "Delete resource", description = "Delete resource by path prefix.")
+    @ApiResponses({
+            @ApiResponse(
+                    description = "Successful deletion", responseCode = "204"),
+            @ApiResponse(
+                    description = "Validation error or path doesn't exist", responseCode = "400",
+                    content = @Content(schema = @Schema(implementation = ErrorMessageResponseDto.class))),
+            @ApiResponse(
+                    description = "Unauthorized user", responseCode = "401",
+                    content = @Content(schema = @Schema(implementation = ErrorMessageResponseDto.class))),
+            @ApiResponse(
+                    description = "Resource not found", responseCode = "404",
+                    content = @Content(schema = @Schema(implementation = ErrorMessageResponseDto.class))),
+            @ApiResponse(
+                    description = "Internal server error", responseCode = "500",
+                    content = @Content(schema = @Schema(implementation = ErrorMessageResponseDto.class)))
+    })
     @DeleteMapping
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteResource(@Valid
-                               @RequestParam(name = "path")
-                               @NotBlank(message = "Parameter \"path\" must not be blank") String path,
+    public void deleteResource(@Valid @RequestParam("path") DeleteResourcePathRequestParam request,
                                @AuthenticationPrincipal CustomUserDetails userDetails) {
-
-        storageService.deleteResource(userDetails.getId(), path);
+        storageService.deleteResource(userDetails.getId(), request.getPath());
     }
 
 
@@ -193,66 +149,57 @@ public class ResourceController {
                             description = "Validation error or path doesn't exist",
                             responseCode = "400",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = MessageDTO.class)
+                                    schema = @Schema(implementation = ErrorMessageResponseDto.class)
                             )
                     ),
                     @ApiResponse(
                             description = "Unauthorized user",
                             responseCode = "401",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = MessageDTO.class)
+                                    schema = @Schema(implementation = ErrorMessageResponseDto.class)
                             )
                     ),
                     @ApiResponse(
                             description = "Resource not found",
                             responseCode = "404",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = MessageDTO.class)
+                                    schema = @Schema(implementation = ErrorMessageResponseDto.class)
                             )
                     ),
                     @ApiResponse(
                             description = "Internal server error",
                             responseCode = "500",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = MessageDTO.class)
+                                    schema = @Schema(implementation = ErrorMessageResponseDto.class)
                             )
                     )
             }
     )
     @GetMapping(value = "/download", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
-    public ResponseEntity<StreamingResponseBody> downloadResource(@Valid
-                                                                  @RequestParam(name = "path")
-                                                                  @NotBlank(message = "Parameter \"path\" must not be blank") String path,
-                                                                  @AuthenticationPrincipal CustomUserDetails userDetails) throws UnsupportedEncodingException {
+    public ResponseEntity<StreamingResponseBody> downloadResource(@Valid @RequestParam("path") String path,
+                                                                  @AuthenticationPrincipal CustomUserDetails userDetails) {
 
         StreamingResponseBody streamingResponseBody = storageService.downloadResource(userDetails.getId(), path);
 
-        Path entirePath = Paths.get(path);
-        String fileName;
-
-        if (path.endsWith("/")) {
-            fileName = entirePath.getFileName().toString().concat(".zip");
+        String filename;
+        if (PathUtils.isDirectory(path)) {
+            filename = PathUtils.extractFilename(path) + ".zip";
         } else {
-            fileName = entirePath.getFileName().toString();
+            filename = PathUtils.extractFilename(path);
         }
 
-        // needed to support other languages, not only English
-        String encodedFileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8).replace("+", "%20");
+        ContentDisposition contentDisposition = ContentDisposition.attachment()
+                .filename(filename)
+                .build();
 
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''%s".formatted(encodedFileName))
+                .headers(headers -> headers.setContentDisposition(contentDisposition))
                 .body(streamingResponseBody);
     }
 
     @Operation(
             summary = "Move resource",
-            description = """
-                    In case of moving resource change only resource path.
-                    In case of renaming resource change only resource name.""",
+            description = " In case of moving resource change only resource path. In case of renaming resource change only resource name.",
             parameters = {
                     @Parameter(
                             name = "from",
@@ -268,7 +215,6 @@ public class ResourceController {
                             description = "Successful resource move",
                             responseCode = "200",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
                                     schema = @Schema(implementation = ResourceInfoResponseDTO.class)
                             )
                     ),
@@ -276,50 +222,45 @@ public class ResourceController {
                             description = "Validation error or path doesn't exist",
                             responseCode = "400",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = MessageDTO.class)
+                                    schema = @Schema(implementation = ErrorMessageResponseDto.class)
                             )
                     ),
                     @ApiResponse(
                             description = "Unauthorized user",
                             responseCode = "401",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = MessageDTO.class)
+                                    schema = @Schema(implementation = ErrorMessageResponseDto.class)
                             )
                     ),
                     @ApiResponse(
                             description = "Resource not found",
                             responseCode = "404",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = MessageDTO.class)
+                                    schema = @Schema(implementation = ErrorMessageResponseDto.class)
                             )
                     ),
                     @ApiResponse(
                             description = "Resource at new path already exist",
                             responseCode = "409",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = MessageDTO.class)
+                                    schema = @Schema(implementation = ErrorMessageResponseDto.class)
                             )
                     ),
                     @ApiResponse(
                             description = "Internal server error",
                             responseCode = "500",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = MessageDTO.class)
+                                    schema = @Schema(implementation = ErrorMessageResponseDto.class)
                             )
                     )
             }
     )
     @GetMapping("/move")
     public ResourceInfoResponseDTO move(@Valid
-                                        @RequestParam(name = "from")
+                                        @RequestParam("from")
                                         @NotBlank(message = "Parameter \"from\" must not be blank") String from,
                                         @Valid
-                                        @RequestParam(name = "to")
+                                        @RequestParam("to")
                                         @NotBlank(message = "Parameter \"to\" must not be blank") String to,
                                         @AuthenticationPrincipal CustomUserDetails userDetails) {
 
@@ -329,8 +270,7 @@ public class ResourceController {
 
     @Operation(
             summary = "Search resource",
-            description = """
-                    Case insensitive search by part or complete resource name.""",
+            description = "Case insensitive search by part or complete resource name.",
             parameters = @Parameter(
                     name = "query",
                     description = "Part or complete resource name"
@@ -340,7 +280,6 @@ public class ResourceController {
                             description = "Resource found",
                             responseCode = "200",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
                                     array = @ArraySchema(
                                             schema = @Schema(implementation = ResourceInfoResponseDTO.class)
                                     )
@@ -350,32 +289,27 @@ public class ResourceController {
                             description = "Validation error or path doesn't exist",
                             responseCode = "400",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = MessageDTO.class)
+                                    schema = @Schema(implementation = ErrorMessageResponseDto.class)
                             )
                     ),
                     @ApiResponse(
                             description = "Unauthorized user",
                             responseCode = "401",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = MessageDTO.class)
+                                    schema = @Schema(implementation = ErrorMessageResponseDto.class)
                             )
                     ),
                     @ApiResponse(
                             description = "Internal server error",
                             responseCode = "500",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = MessageDTO.class)
+                                    schema = @Schema(implementation = ErrorMessageResponseDto.class)
                             )
                     )
             }
     )
     @GetMapping("/search")
-    public List<ResourceInfoResponseDTO> search(@Valid
-                                                @RequestParam(name = "query")
-                                                @NotBlank(message = "Parameter \"query\" must not be blank")
+    public List<ResourceInfoResponseDTO> search(@Valid @RequestParam("query") @NotBlank(message = "Parameter \"query\" must not be blank")
                                                 String query,
                                                 @AuthenticationPrincipal CustomUserDetails userDetails) {
 
@@ -385,8 +319,7 @@ public class ResourceController {
 
     @Operation(
             summary = "Upload resource",
-            description = """
-                    Either file or directory can be uploaded to the system.""",
+            description = "Either file or directory can be uploaded to the system.",
             parameters = {
                     @Parameter(
                             name = "path",
@@ -407,7 +340,6 @@ public class ResourceController {
                             description = "Resource uploaded",
                             responseCode = "201",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
                                     array = @ArraySchema(
                                             schema = @Schema(implementation = ResourceInfoResponseDTO.class)
                                     )
@@ -417,16 +349,14 @@ public class ResourceController {
                             description = "Validation error or path doesn't exist",
                             responseCode = "400",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = MessageDTO.class)
+                                    schema = @Schema(implementation = ErrorMessageResponseDto.class)
                             )
                     ),
                     @ApiResponse(
                             description = "Unauthorized user",
                             responseCode = "401",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = MessageDTO.class)
+                                    schema = @Schema(implementation = ErrorMessageResponseDto.class)
                             )
                     ),
 
@@ -434,16 +364,14 @@ public class ResourceController {
                             description = "Resource already existed",
                             responseCode = "409",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = MessageDTO.class)
+                                    schema = @Schema(implementation = ErrorMessageResponseDto.class)
                             )
                     ),
                     @ApiResponse(
                             description = "Internal server error",
                             responseCode = "500",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = MessageDTO.class)
+                                    schema = @Schema(implementation = ErrorMessageResponseDto.class)
                             )
                     )
             }

@@ -9,6 +9,7 @@ import io.minio.messages.Item;
 import lombok.RequiredArgsConstructor;
 import org.fizz_buzz.cloud.exception.S3RepositoryException;
 import org.fizz_buzz.cloud.model.ResourceInfo;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Repository;
 
 import java.io.IOException;
@@ -24,23 +25,26 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class MinioObjectRepository implements S3ObjectRepository {
 
-    public static final int PART_SIZE = 10485760;
+    private static final int PART_SIZE = 10485760;
 
     private final MinioClient minioClient;
 
+    @Value("${application.user-files-bucket}")
+    private String bucket;
+
     @Override
-    public List<ResourceInfo> findAllInfoByPrefix(String bucket, String prefix, boolean recursive) {
+    public List<ResourceInfo> findAllInfoByPrefix(String prefix, boolean recursive) {
         ListObjectsArgs request = ListObjectsArgs.builder()
                 .bucket(bucket)
                 .prefix(prefix)
                 .recursive(recursive)
                 .build();
 
-        var directoryObjects = minioClient.listObjects(request);
+        var responseItems = minioClient.listObjects(request);
 
         List<ResourceInfo> result = new ArrayList<>();
         try {
-            for (Result<Item> directoryObject : directoryObjects) {
+            for (Result<Item> directoryObject : responseItems) {
                 Item item = directoryObject.get();
                 ResourceInfo resourceInfo = new ResourceInfo(item.objectName(), item.size());
                 result.add(resourceInfo);
@@ -52,7 +56,7 @@ public class MinioObjectRepository implements S3ObjectRepository {
     }
 
     @Override
-    public void delete(String bucket, String path) {
+    public void delete(String path) {
         RemoveObjectArgs request = RemoveObjectArgs.builder()
                 .bucket(bucket)
                 .object(path)
@@ -66,7 +70,7 @@ public class MinioObjectRepository implements S3ObjectRepository {
     }
 
     @Override
-    public void deleteAll(String bucket, List<String> paths) {
+    public void deleteAll(List<String> paths) {
         List<DeleteObject> objects = paths.stream()
                 .map(DeleteObject::new)
                 .collect(Collectors.toList());
@@ -89,7 +93,7 @@ public class MinioObjectRepository implements S3ObjectRepository {
     }
 
     @Override
-    public InputStream getByPath(String bucket, String path) {
+    public InputStream getByPath(String path) {
         GetObjectArgs request = GetObjectArgs.builder()
                 .bucket(bucket)
                 .object(path)
@@ -103,7 +107,7 @@ public class MinioObjectRepository implements S3ObjectRepository {
     }
 
     @Override
-    public void save(String bucket, ResourceInfo resourceInfo, InputStream dataStream) {
+    public void save(ResourceInfo resourceInfo, InputStream dataStream) {
         try {
             PutObjectArgs request = PutObjectArgs
                     .builder()
@@ -118,7 +122,7 @@ public class MinioObjectRepository implements S3ObjectRepository {
     }
 
     @Override
-    public Optional<ResourceInfo> findInfoByPath(String bucket, String path) {
+    public Optional<ResourceInfo> findInfoByPath(String path) {
         StatObjectArgs request = StatObjectArgs.builder()
                 .bucket(bucket)
                 .object(path)
@@ -137,13 +141,9 @@ public class MinioObjectRepository implements S3ObjectRepository {
         }
     }
 
-    @Override
-    public boolean existsByPath(String bucket, String path) {
-        return findInfoByPath(bucket, path).isPresent();
-    }
 
     @Override
-    public void copy(String bucket, String existingPath, String newPath) {
+    public void copy(String existingPath, String newPath) {
         CopySource copySource = CopySource.builder()
                 .bucket(bucket)
                 .object(existingPath)
@@ -162,7 +162,7 @@ public class MinioObjectRepository implements S3ObjectRepository {
     }
 
     @Override
-    public void saveAll(String bucket, Map<ResourceInfo, InputStream> resources) {
+    public void saveAll(Map<ResourceInfo, InputStream> resources) {
         try {
             List<SnowballObject> objects = new ArrayList<>();
             resources.forEach((ResourceInfo info, InputStream dataStream) ->

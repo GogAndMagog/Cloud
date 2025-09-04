@@ -9,11 +9,9 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
-import kotlin.contracts.Returns;
 import lombok.RequiredArgsConstructor;
-import org.checkerframework.common.returnsreceiver.qual.This;
-import org.fizz_buzz.cloud.dto.MessageDTO;
+import org.fizz_buzz.cloud.dto.response.ErrorMessageResponseDto;
+import org.fizz_buzz.cloud.dto.request.CreateDirectoryPathRequestParam;
 import org.fizz_buzz.cloud.dto.response.ResourceInfoResponseDTO;
 import org.fizz_buzz.cloud.request.GetDirectoryContentRequestParam;
 import org.fizz_buzz.cloud.security.CustomUserDetails;
@@ -46,59 +44,37 @@ public class DirectoryController {
         binder.registerCustomEditor(String.class, new StringTrimmerEditor(false));
     }
 
-    @Operation(
-            summary = "Get directory info",
-            description = "Returns collection of resources containing in directory.",
-            parameters = @Parameter(name = "path", description = "Path where resource must be uploaded")
-    )
+    @Operation(summary = "Get directory info", description = "Returns collection of resources containing in directory.")
     @ApiResponses({
             @ApiResponse(
                     description = "Resource found",
                     responseCode = "200",
                     content = @Content(
-                            mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            array = @ArraySchema(
-                                    schema = @Schema(implementation = ResourceInfoResponseDTO.class)
-                            )
+                            array = @ArraySchema(schema = @Schema(implementation = ResourceInfoResponseDTO.class))
                     )
             ),
             @ApiResponse(
-                    description = "Validation error or path doesn't exist",
-                    responseCode = "400",
-                    content = @Content(
-                            mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(implementation = MessageDTO.class)
-                    )
+                    description = "Validation error or path doesn't exist", responseCode = "400",
+                    content = @Content(schema = @Schema(implementation = ErrorMessageResponseDto.class))
             ),
             @ApiResponse(
-                    description = "Unauthorized user",
-                    responseCode = "401",
-                    content = @Content(
-                            mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(implementation = MessageDTO.class)
-                    )
+                    description = "Unauthorized user", responseCode = "401",
+                    content = @Content(schema = @Schema(implementation = ErrorMessageResponseDto.class))
             ),
 
             @ApiResponse(
-                    description = "Directory does not exists",
-                    responseCode = "404",
-                    content = @Content(
-                            mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(implementation = MessageDTO.class)
-                    )
+                    description = "Directory does not exists", responseCode = "404",
+                    content = @Content(schema = @Schema(implementation = ErrorMessageResponseDto.class))
             ),
             @ApiResponse(
-                    description = "Internal server error",
-                    responseCode = "500",
-                    content = @Content(
-                            mediaType = MediaType.APPLICATION_JSON_VALUE,
-                            schema = @Schema(implementation = MessageDTO.class)
-                    )
+                    description = "Internal server error", responseCode = "500",
+                    content = @Content(schema = @Schema(implementation = ErrorMessageResponseDto.class))
             )
     })
     @GetMapping
-    public List<ResourceInfoResponseDTO> getDirectory(@RequestParam("path") GetDirectoryContentRequestParam request,
+    public List<ResourceInfoResponseDTO> getDirectory(@RequestParam("path") @Valid GetDirectoryContentRequestParam request,
                                                       @AuthenticationPrincipal CustomUserDetails userDetails) {
+
         return storageService.getDirectory(userDetails.getId(), request.getPath());
     }
 
@@ -126,7 +102,7 @@ public class DirectoryController {
                             responseCode = "400",
                             content = @Content(
                                     mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = MessageDTO.class)
+                                    schema = @Schema(implementation = ErrorMessageResponseDto.class)
                             )
                     ),
                     @ApiResponse(
@@ -134,7 +110,7 @@ public class DirectoryController {
                             responseCode = "401",
                             content = @Content(
                                     mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = MessageDTO.class)
+                                    schema = @Schema(implementation = ErrorMessageResponseDto.class)
                             )
                     ),
                     @ApiResponse(
@@ -142,7 +118,7 @@ public class DirectoryController {
                             responseCode = "404",
                             content = @Content(
                                     mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = MessageDTO.class)
+                                    schema = @Schema(implementation = ErrorMessageResponseDto.class)
                             )
                     ),
                     @ApiResponse(
@@ -150,7 +126,7 @@ public class DirectoryController {
                             responseCode = "409",
                             content = @Content(
                                     mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = MessageDTO.class)
+                                    schema = @Schema(implementation = ErrorMessageResponseDto.class)
                             )
                     ),
                     @ApiResponse(
@@ -158,15 +134,15 @@ public class DirectoryController {
                             responseCode = "500",
                             content = @Content(
                                     mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = MessageDTO.class)
+                                    schema = @Schema(implementation = ErrorMessageResponseDto.class)
                             )
                     )
             }
     )
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public ResourceInfoResponseDTO createDirectory(@Valid @RequestParam("path") @NotBlank(message = "Parameter \"path\" must not be blank") String path,
+    public ResourceInfoResponseDTO createDirectory(@RequestParam("path") @Valid CreateDirectoryPathRequestParam request,
                                                    @AuthenticationPrincipal CustomUserDetails userDetails) {
-        return storageService.createDirectory(userDetails.getId(), path);
+        return storageService.createDirectory(userDetails.getId(), request.getPath());
     }
 }

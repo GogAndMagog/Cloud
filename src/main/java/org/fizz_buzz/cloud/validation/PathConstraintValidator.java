@@ -12,6 +12,10 @@ public class PathConstraintValidator implements ConstraintValidator<Path, String
 
     @Override
     public boolean isValid(String path, ConstraintValidatorContext context) {
+        if (path == null) {
+            return true;
+        }
+
         for (String directory : path.split("/")) {
             if (directory.isEmpty()) {
                 return false;
